@@ -8,6 +8,8 @@ permalin: Tina
 
 # Tina In the Beginning:
 
+![Critical Match](/images/critical-match.png)
+
 A couple years ago I was working on an [NES game](https://github.com/slembcke/critical-match), and I figured coroutines would perfectly solve a problem I had. The game play code was written in C, but implementing coroutines in assembly felt completely normal considering _most_ of the project was in assembly. I was pretty pleased with [the result](https://github.com/slembcke/critical-match/blob/master/lib/pixler/coroutine.s), and it only took up ~200 bytes in the ROM! In retrospect it was actually pretty complicated because it had to accommodate the dual hardware + software stack cc65 used to implement it's C runtime on the 6502 CPU.
 
 Fast forward a year and I decided some amd64 assembly practice would be fun. I picked coroutines as an interesting example since I'd done it before and it's not something you can just implement in C. Boy was it _so_ much simpler than the cc65 version. Since I was all excited about coroutines at that point I started looking for some "real" libraries. There are some clever (but not so practical) options like [Protothreads](http://dunkels.com/adam/pt/), a bunch of wrappers of Windows fibers and ucontext on Unix (both of which are not-quite-deprecated), and some interesting options like [Boost contexts](https://github.com/septag/deboost.context). There weren't really any _simple_ options though. To be fair, you need a bunch of platform/ABI specific assembly so how could it be simpler?
