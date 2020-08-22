@@ -15,13 +15,13 @@ Fast forward a year and I decided some amd64 assembly practice would be fun. I p
 
 # Enter [Tina](https://github.com/slembcke/Tina):
 
-So I had this really stupid idea... My coroutine implementation had a `.s`, a `.c`, and a `.h` file. The whole thing was _dozens_ of lines of code. Almost as a joke, I made a header only library out of it. Inline assembly in a header seemed like a bad joke, and I like bad jokes. It only supported the amd64 System V ABI, so it was still just a silly novelty.
+So I had this really stupid idea... My coroutine implementation had a `.s`, a `.c`, and a `.h` file. The whole thing was _dozens_ of lines of code. Almost as a joke, I made a header only library out of it. I mean inline assembly in a header _seemed_ like a bad joke, and I like bad jokes! It only supported the amd64 System V ABI, so it was still just a silly novelty. Right?
 
 That's when I had a less stupid idea: You can mix assembly code for different ISAs in a single C file and use the preprocessor to select code for different platforms. So I read some more ABI docs and wrote dozens more lines of code so I could support the System V ABIs for aarch32, aarch64, and amd64. Suddenly it didn't seem like such a dumb idea. It now supported all of the platforms except for weird niche ones like Windows. (Hmm...)
 
 # Visual Studio:
 
-The problem with adding Win64 support was that Visual C stopped supporting inline assembly for 64 bit. Dang! If Visual C didn't support inline assembly, what about inline binary blobs? Yup! You can create custom linker sections with a special pragma, and then tag variables with an attribute to place them in your new section. Clang/GCC have a similar attribute which is nice because I didn't really want to duplicate the code if I didn't have to.
+The problem with adding Win64 support was that Visual C stopped supporting inline assembly for 64 bit. (Dang!) If Visual C didn't support inline assembly, what about inline binary blobs? Yup! You can create custom linker sections with a special pragma, and then tag variables with an attribute to place them in your new section. Clang/GCC have a similar attribute which is nice because I didn't really want to duplicate the code if I didn't have to. Voila!
 
 ```c
 #pragma section("tina", execute)
@@ -30,7 +30,7 @@ __declspec(allocate("tina"))
 const char executable_binay_code_goes_here[] = {...};
 ```
 
-At this point, my "joke" coroutine library supported all the modern desktop OSes, mobile OSes, and as far as I know, console OSes. Not bad for a little over 200 sloc of code. :)
+At this point, my "joke" coroutine library supported all the modern desktop ABIs, mobile ABIs, and as far as I can tell, console ABIs. Not bad for a little over 200 sloc of code. :)
 
 # Going Further:
 
@@ -38,7 +38,7 @@ While coroutines themselves are pretty useful, I remembered watching Christian G
 
 ![fractal](/images/mustache-fractal.png)
 
-At this point I've successfully run Tina and Tina Jobs on 64 bit Linux, Mac, Windows, FreeBSD, and Raspberry Pi (32 and 64 bit). I haven't tried mobile yet, but I'm pretty sure it will work with a few ifdef changes.
+At this point I've successfully run Tina and Tina Jobs on 64 bit Linux, Mac, Windows, FreeBSD, and Raspberry Pi (32 and 64 bit). I haven't tried mobile yet, but I'm pretty sure it will work with a few ifdef changes. It's no longer a joke, and I intend to keep supporting it though I still enjoy the absurdity of a little binary blob snippet in a headerlib. :)
 
 # Get the code:
 
