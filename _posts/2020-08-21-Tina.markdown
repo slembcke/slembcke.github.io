@@ -2,8 +2,7 @@
 layout: post
 title:  "Tina: The header only coroutine libary."
 date:   2020-08-21 21:35:30 -0500
-categories: tina coroutines programming
-permalin: Tina
+permalink: Tina
 ---
 
 # Tina In the Beginning:
