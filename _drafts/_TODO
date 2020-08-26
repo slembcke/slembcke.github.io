@@ -1,0 +1,12 @@
+* Introduce Project Drift
+	* Job system
+	* Graphics Abstraction
+	* Lightfields
+	* Shadow masking
+	* Art pipeline
+	* Sound
+	* Hot reload
+	* Networking
+	* Memory
+	* Savestates
+	
