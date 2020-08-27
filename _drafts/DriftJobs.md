@@ -6,19 +6,25 @@ categories: Drift
 permalink: DriftJobs
 ---
 
+# Story Time
+
+A few years ago there was a startup called Apportable. They made tools for cross-compiling native iOS software to Android, and it worked pretty good. This was especially true for games, and so it was in their best interest to keep iOS gamedev tools healthy. After the original Cocos2D developer moved on, Apportable started funding some of the more active community members and related project such as SpriteBuilder (a Cocos2D editor), and Chipmunk2D (my 2D physics library).
+
 ![SpriteBuilder](/images/SpriteBuilderLogo.png)
 
-I think the last time I really put multi-threading to good use in a homegrown game engine was when I was working with the SpriteBuilder team on Cocos2D 3.1. I had completely rewritten the Cocos2D rendering code to use command buffers with the intention of enabling automatic sprite batching and adding support for a rendering thread. It allowed us to get surprisingly good performance out of the otherwise stock Objective-C Cocos2D API. Even a lowly iPad 2 could have hundreds of physics backed sprites on the screen at a smooth 60 hz. Several people had voiced the opinion that attempting to multi-thread Cocos2D's rendering was a dead end, so I was pleased to be able to prove otherwise. :)
+Our efforts got rolled together under the banner of Cocos2D-SpriteBuilder and we released v3.0 of Cocos2D. One of the big projects I wanted to tackle next was to move to using command buffers and executing them on a dedicated rendering thread. I was told a few times that attempting to thread Cocos2D was pointless and would provide little to no performance benefit. You see Cocos2D was node based, so to do rendering it would traverse the tree calling the `draw` methods, which in turn would modify the OpenGL state and make draw calls. Serial execution and global graphics state will probably make some readers cringe in 2020, but to be fair Cocos2D was created by one guy in his spare time for a mobile device with a single core CPU running GLES 1.0. Unfortunately, by 2015 the dual core iPad 2 was the minimum spec many devs were targeting, and Cocos2D didn't really have a way of taking advantage of that second CPU core.
+
+So I buckled down and rewrote _all_ of the rendering code to wrap it up into a command buffer, and executed it on a dedicated rendering thread. Additionally, I was able to implement automatic batching and culling. The benefit was understandably huge. :D Here's an early video of a demo we made for GDC that year. This ran on an iPad 2 with hundreds of physics backed sprites, and all sorts of other effects at 60 hz. I was quite pleased to get this sort of performance with minimal API changes.
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/eJsnCOkG8qs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-Unfortunately the success was short lived. The SpriteBuilder project was being funded by a startup called Apportable. They made iOS to Android cross-compilation tools, and wanted high quality iOS gamedev tools to flourish. Shortly after GDC that year, most of their money dried up and the SpriteBuilder team collapsed due to internal politics.
+Unfortunately the success was short lived. Shortly after GDC that year, most of Apportable's funding went away and unfortunately the SpriteBuilder collapsed shortly after due to internal politics about how we should continue. Oh well. 
 
 # Job System 2020
 
-Running with just a main thread and a rendering thread is so 2010. Even a Raspberry Pi has 4 cores in 2020! For [Project Drift](ProjectDrift) I wanted to try something new. There's a great GDC talk by Christian Gyrling called [Parallelizing the Naughty Dog Engine Using Fibers](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine) and it describes a neat, and relatively simple job system design. Having recently implemented coroutines via my [Tina](/Tina) project, this sounded like too much fun to pass up! :D Even more fascinating is the idea of getting rid of your main thread. Once you have a job system that lets you run a swath of tiny tasks and synchronize them into a delicate dance, what do you need a rigid main loop for?
+Running with a dedicated main thread and a rendering thread is so... 2010. This is 2020, and even a Raspberry Pi has 4 cores! For [Project Drift](ProjectDrift) I wanted to try something new. There's a great GDC talk by Christian Gyrling called [Parallelizing the Naughty Dog Engine Using Fibers](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine) and it describes a neat, and relatively simple job system design. Even more fascinating is the idea of getting rid of the main thread entirely. Once you have a job system that lets you run a swath of tiny tasks and easily synchronize them into a delicate dance, what do you need a rigid main loop for?
 
-Practically the first code I wrote on top of Tina was Tina Jobs that implemented Christian's ideas as I understood them while attempting to keep the implementation as simple as possible. 
+Having recently implemented coroutines via my [Tina](/Tina) project, this sounded like too much fun to pass up! :D Originally it started as a toy project to render fractals with, but it turned out so nicely that I decided to use it in Project Drift too.
 
 scheduler, queue, job, group
 
