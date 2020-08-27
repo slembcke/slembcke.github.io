@@ -10,6 +10,13 @@
 	* Memory
 	* Savestates
 	* ECS
+* 2D Lighting
+	* Basics (screen space map, blending)
+	* Hard shadow masks
+	* Soft shadow masks
+	* Soft shadow blend and clear
+	* Fourier light field
+	* Sampling the light field
 * How To:
 	* Beginning Vulkan (C99, Linux, Layers)
 	* NES Dev tutorials
