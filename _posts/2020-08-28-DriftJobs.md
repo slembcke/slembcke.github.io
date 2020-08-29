@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "Project Drift Job System"
+description: "How and why I added a job system to my game project."
 date:   2020-08-28 12:00:00 -0500
 categories: Drift
 ---
