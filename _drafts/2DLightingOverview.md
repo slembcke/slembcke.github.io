@@ -7,7 +7,8 @@ date:   2020-01-01 12:00:00 -0500
 # permalink: 
 ---
 
-<!-- * 3D lighting
+<!--
+* 3D lighting
 	* Forward
 	* Deferred
 	* Need for something else?
@@ -16,7 +17,7 @@ date:   2020-01-01 12:00:00 -0500
 	* Hard shadows
 	* Stencil vs alpha vs texture
 * Soft shadow masks
-	* Linear subtractive penumbras -->
+	* Linear subtractive penumbras
 * Image based options
 	* Radial blur
 	* Polar space blur
@@ -25,13 +26,28 @@ date:   2020-01-01 12:00:00 -0500
 * Raymarching
 * Grids
 * Fourier light fields
+-->
 
-
-In the early 2000's I played an indie game called [Gish](http://www.chroniclogic.com/gish.htm). One of the many amazing things about the game was its 2D lighting effects. They were glorious, and I had never seen anything like them. Sure, there were a handful of 3D games by that point that did shadow mapping, but never in a 2D game.
+In the early 2000's I played an indie game called [Gish](http://www.chroniclogic.com/gish.htm). One of the many amazing things about the game was its 2D light and shadow effects. They were glorious, and I had never seen anything like them in a 2D game.
 
 (Gish video here)
 
-They algorithm used is simple enough that I was able to successfully guess my way through it, and it set up a bit of a quest to perfect the technique that I would continue in the back of my mind for the next decade. Before diving into the path I took. I figure it's worth talking about the other algorithms I've seen along the way and what makes them stand out.
+The algorithm they used is simple enough that I was able to successfully guess my way through it, and it set up a bit of a quest to perfect the technique that I would continue in the back of my mind for the next decade. Before diving into the path I took. I figure it's worth talking about the other algorithms I've seen along the way and what makes them stand out.
+
+# Forward Rendering
+
+Forward rendering is one of the most quintessential lighting algorithms. To render a fully lit surface, you use additive blending to render multiple passes. Each pass calculates the contribution for a different light source shining on the surface.
+
+Pros:
+* Forward rendering is very flexible.
+* Work with alpha blending.
+* Works with normal mapping.
+
+Cons:
+* Gets very expensive to have a lot of lights.
+* Shadows are expensive.
+* Complicated to implement efficiently.
+* Alpha blending precludes many optimizations.
 
 # Lighting for Modern 3D
 
