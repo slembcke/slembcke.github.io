@@ -165,9 +165,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4843049"
-     inkscape:cx="347.55586"
-     inkscape:cy="-31.237146"
+     inkscape:zoom="4.1982482"
+     inkscape:cx="236.58478"
+     inkscape:cy="71.13875"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -182,7 +182,8 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     units="px" />
+     units="px"
+     inkscape:snap-object-midpoints="true" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -191,7 +192,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -314,15 +315,15 @@
            id="tspan918">Allocated blocks</tspan></tspan></text>
     <path
        sodipodi:nodetypes="cc"
-       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker11282)"
-       d="m 134.94545,16.094875 23.60186,17.227213"
+       style="fill:none;stroke:#000000;stroke-width:0.26458334;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker11282)"
+       d="M 134.94545,16.094875 159.24966,34.08528"
        id="path11278"
        inkscape:connector-curvature="0" />
     <path
        inkscape:connector-curvature="0"
        id="path12322"
-       d="M 134.94545,16.094875 85.441406,34.330445"
-       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker12326)"
+       d="M 134.94545,16.094875 84.316212,34.08528"
+       style="fill:none;stroke:#000000;stroke-width:0.26458334;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker12326)"
        sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
@@ -342,12 +343,12 @@
     <path
        sodipodi:nodetypes="cc"
        style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker15106)"
-       d="M 34.109726,53.151998 22.923266,34.078356"
+       d="M 34.109726,53.151998 23.247432,34.08528"
        id="path15102"
        inkscape:connector-curvature="0" />
     <path
        style="fill:none;stroke:#898989;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-mid:url(#marker16678);marker-end:url(#marker16678)"
-       d="M 22.923266,34.078355 C 23.608955,13.25983 67.24641,17.818415 65.794198,34.450124 65.849178,48.210975 41.30449,14.073897 43.610341,32.937589 c 0.46063,23.847534 72.749549,26.451797 73.231949,3.781339 0.46417,-2.534976 22.51053,-24.621323 23.19221,-3.025071 -0.14654,4.494472 35.81729,21.580269 37.30921,3.277161"
+       d="m 23.247432,34.08528 c 0.685689,-20.818525 42.164731,-16.631709 40.712519,0 0.05498,13.760851 -22.662107,-18.863692 -20.356256,0 0.46063,23.847534 74.451095,22.670458 74.933495,0 0.46417,-2.534976 19.67454,-21.596252 20.35622,0 -0.14654,4.494472 39.22059,18.303108 40.71251,0"
        id="path16668"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccccc" />
