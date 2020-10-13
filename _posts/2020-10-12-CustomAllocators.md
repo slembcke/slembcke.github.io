@@ -37,6 +37,8 @@ Over the years, I've wasted _many_ hours debugging memory issues. With just a ha
 
 ## Common Allocators
 
+Several of the common allocators you hear people talk about are so simple, you can describe them in a paragraph! (Though I'm going to cheat and use diagrams too.)
+
 ### 1) Slab Allocator
 
 ![Slab Allocator Diagram](/images/SlabAllocator.svg)
