@@ -10,4 +10,7 @@ serve: build
 review: build
 	bundler exec jekyll server
 
+publish:
+	git push origin master:published
+
 .PHONY: update build serve review

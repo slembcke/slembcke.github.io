@@ -33,7 +33,7 @@ So while I didn't know it at the time, I had several reasons to want a custom al
 
 ### More reasons to bother with custom allocators
 
-Over the years, I've wasted _many_ hours debugging memory issues. With just a hash table and a set of linked lists, you can track the history of all your allocations. That makes it pretty easy to track down use after free errors, double free errors, and memory leaks. Using guard pages around your allocations, you can detect overflows. Techniques like this can be a nice complement to external tools like Valgrind. Between the simplified memory ownership, having tools to help detect errors, and tools to debug issues when they do occur, I can happily say I haven't spent a lot of time debugging memory issues for years. :)
+Over the years, I've wasted _many_ hours debugging memory issues. With just a hash table and a set of linked lists, you can track the history of all your allocations. That makes it pretty easy to track down use after free errors, double free errors, and memory leaks. Using guard pages around your allocations, you can detect overflows. Techniques like this can be a nice complement to external tools like Valgrind or AddressSanitizer. Between the simplified memory ownership, having tools to help detect errors, and tools to debug issues when they do occur, I can happily say I haven't spent a lot of time debugging memory issues for years. :)
 
 ## Common Allocators
 
@@ -69,7 +69,7 @@ Zone allocators are pretty simple to extend to be thread safe as well. Instead o
 
 The buddy block allocator is the fanciest allocator I've personally implemented. It's pretty generic, and is exactly the sort of thing I thought would be a waste of time all those years ago. On the other hand it's not particularly complicated, and my own implementation is barely 200 sloc. The basic idea is that you start with a large block of memory that you want to split up, and when you make allocations you recursively break the block into halves until you have the size you need. Since sub-blocks are always broken into pairs (buddies), it's easy to figure out the location of any given block's buddy with a little math. When freeing a block, you can easily check if the buddy is free and join them back together into a larger block.
 
-While I can't succinctly describe the whole algorithm in a paragraph, there are plenty of articles on the internet if you want a clearer picture.
+While I can't succinctly describe the whole algorithm in a paragraph, there are plenty of articles on the internet if you want a clearer picture. Also, keep in mind that while this is a pretty generic algorithm that you really _could_ replace malloc() with, you might want to have a pretty good idea of why you'd want to. Maybe you have some strong latency constraints (audio, graphics, etc), or maybe you are allocating something that isn't regular memory (ex: Vulkan memory). I've only used my implementation in a real-time audio synthesizer, but it would have been fine without it too. It was for a hobby project, and it was fun. :)
 
 **When to use it:** When you need a general purpose allocator with predictable performance.
 
