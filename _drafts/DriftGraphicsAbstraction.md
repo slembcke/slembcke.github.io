@@ -11,21 +11,29 @@ categories: Drift
 
 ## Story Time
 
-A few years ago there was a startup called Apportable. They made tools for cross-compiling native iOS software to Android, and it worked pretty good. This was especially true for games, and so it was in their best interest to keep iOS gamedev tools healthy. After the original Cocos2D developer moved on, Apportable started funding some of the more active community members and related project such as SpriteBuilder (a Cocos2D editor), and Chipmunk2D (my 2D physics library).
+So quite a few years ago now, I was being funded to work on a continuation of the Cocos2D 2.x codebase for making iOS games. There was a company called Apportable that made a toolchain for compiling iOS apps on Android. An easy target for Apportable's tech was games that were built on the Cocos2D engine, so they got involved with funding further development. I got involved since my physics engine ([Chipmunk2D](https://github.com/slembcke/Chipmunk2D)) was included with Cocos2D, and Apportable wanted to build out the ecosystem for more potential customers.
 
-![SpriteBuilder](/images/SpriteBuilderLogo.png)
+Skipping over a lot of details, I ended up being made the unofficial "tech director" for the project, and one of my biggest goals was to add some threading support into the rendering. You see Cocos2D was based around scene graph traversal and "draw" methods that modified OpenGL state directly. Surely a lot of people are cringing at the idea in 2020, but keep in mind Cocos2D was originally targeting the original iPhone with a single core CPU and OpenGLES 1.x. Anyway, I was sure I could rewrite it to record a command buffer using explicit graphics state objects, and execute it on a dedicated rendering thread. Pretty standard stuff.
 
-Our efforts got rolled together under the banner of Cocos2D-SpriteBuilder and we released v3.0 of Cocos2D. One of the big projects I wanted to tackle next was to move to using command buffers and executing them on a dedicated rendering thread. I was told a few times that attempting to thread Cocos2D was pointless and would provide little to no performance benefit. You see Cocos2D was node based, so to do rendering it would traverse the tree calling the `draw` methods, which in turn would modify the OpenGL state and make draw calls. Serial execution and global graphics state will probably make some readers cringe in 2020, but to be fair Cocos2D was created by one guy in his spare time for a mobile device with a single core CPU running GLES 1.0. Unfortunately, by 2015 the dual core iPad 2 was the minimum spec many devs were targeting, and Cocos2D didn't really have a way of taking advantage of that second CPU core.
-
-So I buckled down and rewrote _all_ of the rendering code to wrap it up into a command buffer, and executed it on a dedicated rendering thread and explicit graphics state objects. Additionally, I was able to implement automatic batching and culling. The benefit was understandably huge. :D Here's an early video of a demo we made for GDC that year. This ran on an iPad 2 with hundreds of physics backed sprites, and all sorts of other effects at 60 hz. I was quite pleased to get this sort of performance with minimal user API changes. Eventually I even made an optional Metal based renderer as too.
+This is an example game we prepared for GDC in 2015. It had fun effects like screen space distortion, normal mapped lighting, and hundreds of physics backed bodies + collisions all running at a smooth 60 fps on an iPad 2. A four year old tablet!
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/eJsnCOkG8qs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-Unfortunately the success was short lived. Shortly after GDC that year, most of Apportable's funding went away and unfortunately the SpriteBuilder collapsed shortly after due to internal politics about how we should continue. Oh well.
-
 ## Why Another renderer?
 
-After Cocos, 
+Since then I've made a few throwaway renderers for failed hobby projects and various contracts I've worked on, but none of them really stuck. Once I got serious about finishing Project Drift I decided I wanted something new, and purpose built for 2D rendering. I had a fairly specific 
+
+* Rendering heavily batched sprites (streaming buffers + instancing)
+* Cram all the sprite atlases into a single binding (texture arrays)
+* Deformable terrain (async texture uploads)
+* API agnostic (Spir-V, spirv-cross)
+
+* Streaming buffers for pushing dynamic sprite data.
+* Multiple render targets to handle my lightfield rendering.
+* Texture arrays for a giant set of sprite atlases or streamed data.
+* Vertex and fragment shaders are enough.
+
+Ironically I held the renderer back at GL 3.x support to older machines, and make it easier to support GLES 3.x machines like the Raspberry Pi 4 for funsies. In the end drug my feet for so long that the Pi 4 got a Vulkan driver and it works great for running Project Drift. >_<
 
 ## Rendering Code Example
 
