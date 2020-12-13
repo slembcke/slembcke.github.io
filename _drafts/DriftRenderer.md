@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Project Drift Graphics Abstraction"
+title:  "Project Drift Rendering"
 description: "An overview of my custom renderer in Project Drift"
 date:   2020-01-01 12:00:00 -0500
 categories: Drift
@@ -94,7 +94,8 @@ bindings->samplers[0] = bilinear_sampler;
 bindings->textures[0] = offscreen_buffer_texture;
 DriftGfxPushDrawIndexedCommand(renderer, index_bind, vertex_count, 1);
 
-// Lastly, we hand the renderer back to the system and present it.
+// Lastly, we hand the renderer back to the system to execute and present it.
+// In my actual game I do this part on a dedicated graphics thread.
 DriftAppPresentFrame(app, renderer);
 ```
 
@@ -102,9 +103,9 @@ Though vastly simpler than GL or Vulkan, it's still admittedly pretty verbose wh
 
 ## Initialization
 
-Since it's trying to be a vaguely good modern API citizen, there is a fair amount of init work so that it doesn't have to clutter up the runtime API. To keep the code simple, there are relatively few functions, and like Vulkan you have to pack structs full of options. Unlike Vulkan, I kept my feature set pretty small so there aren't a bajillion options that are all required. ;)
+Since it's vaguely trying to be a good modern API citizen, there is a fair amount of init work so that the runtime API can be minimized. To keep the code simple, there are relatively few functions, and like Vulkan you have to pack structs full of options. Unlike Vulkan, I kept my feature set pretty small so there aren't a bajillion options that are all required. ;)
 
-Also since I have both a GL and Vulkan implementation, I have one of those dirty plain C dispatch table thingies as the `driver` object. (I hear people cringing again) Fortunately it's the only place in my game I've needed to do this, and it has a half dozen functions. It's not so bad. ;)
+Also since I have both a GL and Vulkan implementation, I have one of those dirty plain C dispatch table thingies as the `driver` object. (Do I hear people cringing again?) Fortunately it's the only place in my game I've needed to do this, and it has a half dozen functions. It's not so bad. ;)
 
 Here's an example of creating a 
 
@@ -173,7 +174,7 @@ sprite_pipeline driver->new_pipeline(driver, (DriftGfxPipelineOptions){
 
 That's pretty much it for shader setup. It's definitely the most tedious part of shader programming. I tried to keep it as simple as possible, but without taking away the power to pack my own attribute data. So far it's worked great.
 
-## Shaders: SPIR-V to the rescue! :D
+## Shaders: SPIR-V to the rescue!
 
 I'm not a huge fan of GLSL. Almost every shader I've ever written has been a matched vertex/fragment pair, and splitting them into separate files doesn't really make sense in the general case. Matching the in/out parameters between them by hand is needlessly tedious. I also have a fair amount of shared code to make my light-field rendering work, and GLSL really doesn't have a way to link multiple files or do includes. Sure there are hacks and workarounds, but why bother?
 
@@ -225,8 +226,22 @@ A section of terrain vs. it's density tiles. The slight discoloration is actuall
 
 ## Threading
 
-Last, but not least. I wanted to have good support for threading in the renderer. Though I surely could have built the whole game to be single threaded with acceptable performance, I wanted to take this as a learning experience. Going back to my experience with the Cocos renderer, having a dedicated rendering thread worked so well I didn't want to take a step back. Even worse, I made my own [fiber based job system](/drift/2020/08/28/DriftJobs.html) for Project Drift, and have been having a blast with it. :D I definitely wanted the ability to start recording the next frame's commands while waiting for the previous frame to complete. Although I'm curious to try playing with multiple command recording threads, I decided that was way overkill, especially when my renderer is already so heavily batch oriented.
+Last, but not least. I wanted to have good support for threading in the renderer. The threaded renderer I made for Cocos worked so well, I've never really wanted to take a step back from it. Worse, I decided to take a step forward and make my own [fiber based job system](/drift/2020/08/28/DriftJobs.html) for Project Drift. So far I've been having a blast with it, and it works extremely well! While I'm sure I could have gotten away with acceptable performance with just a single thread, I also wanted this project to be a learning experience where I get to try new things and try to stay current. I had considered implementing the ability to have multiple command recording threads... but nah. My renderer is already so heavily batch oriented it just doesn't make any sense.
 
 ## Thoughts
 
-Overall I'm quite happy with what I came up with. It's relatively simple, but capable of everything I need. Between GL3 and Vulkan, it runs on a pretty wide variety of hardware. As a bonus, the Vulkan driver for the Raspberry Pi 4 has been working fantastically. With only a few tweaks, I've been able to get my game up and running there, and the performance is great! In my tests, it can handle rendering as many sprites as I can move with `memcpy()` in a single frame. It even handles my crazy light-field rendering scheme with eas. :)
+Overall I'm quite happy with what I came up with. It's relatively simple, but capable of everything I need. Between GL3 and Vulkan, it runs on a pretty wide variety of hardware. Sure, it's a couple thousand lines of code I could have avoided by using somebody library, but it's also the sort of code I enjoy writing. I consider it time well spent. :)
+
+As far as Vulkan being too complicated? Well that is itself... complicated. Yes, there is more "stuff" you have to do, but there are also libraries that cover much of it: Instance + device initialization, swapchain creation + syncronization, memory management, pipeline construction, descriptor updates, etc. On the other hand, Vulkan validations are fantastic. Maybe D3D and Metal validations have caught up since I last tried them, but it's certainly light years ahead of GL's error handling. Overall, I liked working with Vulkan enough that it's become the default renderer I run, and the only one I bothered to implement hot-reloading for.
+
+In my opinion, somebody just needs to popularize a thin wrapper for Vulkan. Something that provides:
+* Very basic initialization and device selection
+* A ready-to-use swapchain implementation
+* Very basic memory management
+* Simplified pipeline construction that provides default values
+* Simplified texture and render texture creation
+* A simple, fixed descriptor binding model
+
+If it's strictly trying to provide a subset of the Vulkan API, and not just a different abstraction of the existing one, then it would be suspiciously similar to Metal. It would also allow the codebase to be kept small, maybe 1-2k sloc, and that's good for hackability. When it doesn't do what you want, it's simple enough to be changed! If such a library had existed for me to use, my Vulkan renderer would be considerably shorter than the GL renderer.
+
+As an added bonus, the new Vulkan driver for the Raspberry Pi 4 has been working fantastically. With only a few tweaks, I've been able to get my game up and running there, and the performance is great! In my tests, though it's quite fillrate bound, it can handle rendering as much stuff as I can push with `memcpy()` in a single frame. It even handles my crazy light-field rendering scheme with ease. :D
