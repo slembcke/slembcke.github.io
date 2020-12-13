@@ -7,13 +7,13 @@ categories: Drift
 # permalink: 
 ---
 
-![Project Drift screenshot](/images/DriftGraphicsAbstraction/Key.png)
+![Project Drift screenshot](/images/DriftRenderer/Key.png)
 
 ## Story Time
 
 A number of years ago, I was being funded to work on a continuation of the Cocos2D-iPhone 2.x codebase, a popular open source framework for making iOS games. There was a company called Apportable that made a toolchain for compiling iOS apps on Android. An easy target for Apportable's tech was games that were built on Cocos2D since the required subset of iOS libraries to support it was quite solid already. Riq, the original developer of Cocos had recently moved on to a different fork for C++, and left further development of the Objective-C version to the community. Apportable started funding people full time to keep working on it, and I got involved since my physics engine ([Chipmunk2D](https://github.com/slembcke/Chipmunk2D)) was included with Cocos2D.
 
-Skipping over a lot of details, I ended up being made the unofficial "tech lead" for the project, and one of my biggest goals was to add some threading support into the rendering. You see Cocos2D was based around scene graph traversal and nodes had "draw" methods that modified OpenGL state directly. Surely a lot of people are cringing at the idea in 2020, but keep in mind Cocos2D was originally targeting the original iPhone with a single core CPU and OpenGL ES 1.x. Anyway, I was sure I could rewrite it to record a command buffer using explicit graphics state objects, and execute it on a dedicated rendering thread. Pretty standard stuff nowadays.
+At some point, I was put in charge of rendering improvements, and one of my biggest goals was to add some threading support to it. You see Cocos2D was based around scene graph traversal and nodes had "draw" methods that modified OpenGL state directly. Surely a lot of people are cringing at the idea in 2020, but keep in mind Cocos2D was originally targeting the original iPhone with a single core CPU and OpenGL ES 1.x. Anyway, I was sure I could rewrite it to record a command buffer using explicit graphics state objects, and execute it on a dedicated rendering thread. Pretty standard stuff nowadays.
 
 This is an example game we prepared for GDC in 2015. It had fun effects like screen space distortion, normal mapped lighting, and hundreds of physics backed bodies + collisions all running at a smooth 60 fps on an iPad 2. A tablet that was considered min spec in 2015. :)
 
@@ -220,7 +220,7 @@ Since one of the main features I wanted in the game was to have large scale defo
 
 While not really a renderer feature per-se, I use the texture streaming for a simple virtual texturing scheme in the game for the deformable terrain density texture. Since it's a pixel art game, nearly everything is nearest sampled... except for the one texture I want to virtualize. On top of that, it needs to have high quality derivatives for the lighting. Drat! Fortunately, I found a fun solutions to both problems that I'm quite pleased with. Since I only need a single channel for the density value, I pre-gather a texel's neighbor samples into an RGBA texture while uploading tiles into the cache. Then in the shader with a single nearest neighbor sample, and some mild decoding I can get a high quality density derivative and a linearly filtered value.
 
-![virtual texturing](/images/DriftGraphicsAbstraction/DensityTiles.png)
+![virtual texturing](/images/DriftRenderer/DensityTiles.png)
 
 A section of terrain vs. it's density tiles. The slight discoloration is actually the encoding of the derivative. It works even better than when I was using a page table and screen space derivatives before. \o/
 
