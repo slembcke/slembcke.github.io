@@ -21,7 +21,7 @@ This is an example game we prepared for GDC in 2015. It had fun effects like scr
 
 ## Why Another renderer?
 
-While I did consider using an off the shelf renderer such as [sokol_gfx.h](https://github.com/floooh/sokol) or [bgfx](https://github.com/bkaradzic/bgfx), I ultimately decided to write my own. I figured I didn't need anything fancy, and could keep it relatively simple. Also, I enjoy graphics programming, and new I could do it.
+While I did consider using an off the shelf renderer such as [sokol_gfx.h](https://github.com/floooh/sokol) or [bgfx](https://github.com/bkaradzic/bgfx), I ultimately decided to write my own. I figured I didn't need anything fancy, and could keep it relatively simple. Also, I enjoy graphics programming, and knew I could do it.
 
 So what do I need a renderer to do?
 
