@@ -1,6 +1,4 @@
 * Introduce Project Drift
-	* Job system
-	* Graphics Abstraction
 	* Lightfields
 	* Shadow masking
 	* Art pipeline
@@ -20,3 +18,4 @@
 * How To:
 	* Beginning Vulkan (C99, Linux, Layers)
 	* NES Dev tutorials
+	* GDB

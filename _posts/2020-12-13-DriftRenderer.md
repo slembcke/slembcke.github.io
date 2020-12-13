@@ -2,7 +2,7 @@
 layout: post
 title:  "Project Drift Rendering"
 description: "An overview of my custom renderer in Project Drift"
-date:   2020-01-01 12:00:00 -0500
+date:   2020-12-13 12:00:00 -0500
 categories: Drift
 # permalink: 
 ---
