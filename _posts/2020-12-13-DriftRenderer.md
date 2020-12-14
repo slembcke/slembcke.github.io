@@ -101,13 +101,27 @@ DriftAppPresentFrame(app, renderer);
 
 Though vastly simpler than GL or Vulkan, it's still admittedly pretty verbose when all you want to do is draw a bunch of quad instances over and over. In my actual code, all of that shared state is tucked behind a single `bindings = draw_quads(pipeline, count)` call. So all I need to do is fill in a couple of the unique slots on the bindings for textures and local uniform values. That makes it pretty easy to buffer and draw lots of things. :)
 
+For example, in my game I have a deferred-like lighting model where I store the 5 fourier series coefficients for a [diffuse lightfield](https://www.shadertoy.com/view/ld2cW1). Kind of like a per-pixel spherical harmonics probe, but simpler because it's in 2D. To render all the lights in the game at once to all 5 texture array slices, it only takes a few lines of code. The mesh instance data and global uniforms are already uploaded at the beginning of the frame so `draw_quads()` can set all of the binding state for me except the instance data.
+
+```c
+// Bind all five MRT targets for the lightfield coefficients.
+DriftGfxPushBindTargetCommand(renderer, lightfield_target, black_color);
+
+// Copy all of the lighting instance data into VRAM.
+light_bind = DriftGfxRendererPushGeometry(renderer, lights, lights_size);
+
+// Draw instanced quads, and set only the unique bindings.
+bindings = draw_quads(draw, light_pipeline, light_count);
+bindings->instance = light_bind
+```
+
 ## Initialization
 
 Since it's vaguely trying to be a good modern API citizen, there is a fair amount of init work so that the runtime API can be minimized. To keep the code simple, there are relatively few functions, and like Vulkan you have to pack structs full of options. Unlike Vulkan, I kept my feature set pretty small so there aren't a bajillion options that are all required. ;)
 
 Also since I have both a GL and Vulkan implementation, I have one of those dirty plain C dispatch table thingies as the `driver` object. (Do I hear people cringing again?) Fortunately it's the only place in my game I've needed to do this, and it has a half dozen functions. It's not so bad. ;)
 
-Here's an example of creating a 
+Here's an example of creating a texture.
 
 ```c
 // I've been a huge fan of C99 initializer lists for a long time.
