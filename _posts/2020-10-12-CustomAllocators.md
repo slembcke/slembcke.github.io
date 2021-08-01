@@ -3,8 +3,7 @@ layout: post
 title:  "Custom Allocators Demystified"
 description: "An introduction to the what and why of custom allocators."
 date: 2020-10-12
-#categories: jekyll update
-# permalink: 
+permalink: Custom-Allocators
 ---
 
 Have you ever wondered why people write their own memory allocators? Are they masochists? Do they think they can write a better memory allocator than the OS? Shouldn't they just use a garbage collected language instead?

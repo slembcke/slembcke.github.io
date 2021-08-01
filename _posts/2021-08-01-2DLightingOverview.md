@@ -2,8 +2,8 @@
 layout: post
 title:  "2D Lighting Techniques"
 description: "An overview of various 2D lighting techniques."
-date:   2020-01-01 12:00:00 -0500
-# permalink: 
+date:   2021-08-01
+permalink: 2D-Lighting-Overview
 ---
 
 <!--
@@ -161,7 +161,7 @@ If you are familiar with spherical harmonic light probes, they take a lot of mat
 
 ## Light Space Shadows
 
-There are a few shadowing algorithms [I've seen](http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/) that operate in light space to generate a shadow mask directly by rendering the scene. Each light has a buffer, and the alpha of the surrounding sprites and level are rendered into it. Then the shadows are generated in texture space by smearing the alpha from the center out in multiple passes. Some people also apply some radial blur to get some simple soft shadows.
+There are a few shadowing algorithms I've seen ([example](http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/)) that operate in light space to generate a shadow mask directly by rendering the scene. Each light has a buffer, and the alpha of the surrounding sprites and level are rendered into it. Then the shadows are generated in texture space by smearing the alpha from the center out in multiple passes. Some people also apply some radial blur to get some simple soft shadows.
 
 **Pros:**
 * Doesn't require redundant outline data for shadow casters.

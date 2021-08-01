@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Project Drift Job System"
-description: "A job system for my hobby project."
+description: "A job system for my hobby game."
 date:   2020-08-28 12:00:00 -0500
 categories: Drift
 ---
