@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "Simple 2D Lighting with Hard Shadows"
-description: ""
-date: 2020-01-01 12:00:00 -0500
+title: "2D Lighting with Hard Shadows"
+description: "Techniques to implement simple yet efficient hard shadows for a 2D game."
+date: 2021-08-04
 #categories: jekyll update
-permalink: 
+permalink: SuperFastHardShadows
 ---
 
 <canvas id="glcanvas" width="640" height="480"></canvas>
