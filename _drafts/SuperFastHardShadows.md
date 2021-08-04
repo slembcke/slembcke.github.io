@@ -151,3 +151,229 @@ If your shadow geometry is all static, you'll almost definitely want to load it 
 ## Conclusion
 
 That is pretty much everything I know about implementing hard shadows for 2D games. Hopefully it gives you some ideas about how you want to implement them in your own game. In the next article I'll show how to take this idea and extend it to produce fairly accurate soft shadows. Happy illuminating. :)
+
+<canvas id="glcanvas" width="512" height="512"></canvas>
+
+<script>
+const light_vshader = (`
+	attribute vec2 a_vertex;
+	attribute vec2 a_uv;
+	
+	varying lowp vec2 v_uv;
+	
+	uniform mat4 u_matrix;
+
+	void main(){
+		gl_Position = u_matrix*vec4(a_vertex, 0, 1);
+		v_uv = a_uv;
+	}
+`);
+
+const light_fshader = (`
+	varying lowp vec2 v_uv;
+	
+	uniform lowp vec3 u_color;
+	
+	void main(){
+		lowp float brightness = max(0.0, 1.0 - length(v_uv));
+		gl_FragColor = vec4(brightness*u_color, 1.0);
+	}
+`);
+
+const LIGHT_SPRITE_VERTS = new Float32Array([
+	 10,  10,  10,  10,
+	-10,  10, -10,  10,
+	 10, -10,  10, -10,
+	-10, -10, -10, -10,
+]);
+
+const shadow_vshader = (`
+	attribute vec3 a_vertex;
+	
+	uniform mat4 u_matrix;
+	uniform vec2 u_light_position;
+
+	void main(){
+		highp vec4 world_pos = u_matrix*vec4(a_vertex, 1.0);
+		gl_Position = vec4(world_pos.xy - world_pos.z*u_light_position, 0, 1.0 - world_pos.z);
+	}
+`);
+
+const shadow_fshader = `void main(){gl_FragColor = vec4(0.0);}`;
+
+const SHADOW_VERTS = new Float32Array([
+	-0.1,  0.1, 0,
+	-0.1,  0.1, 1,
+	 0.1,  0.1, 0,
+	 0.1,  0.1, 1,
+]);
+
+function main() {
+	const canvas = document.querySelector('#glcanvas');
+	const gl = canvas.getContext('webgl');
+
+	if(!gl){
+		alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+		return;
+	}
+
+	const blend_light = {
+		equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_ADD},
+		function: {color_src:gl.DST_ALPHA, color_dst:gl.ONE, alpha_src:gl.ONE, alpha_dst:gl.ZERO},
+	};
+	
+	const blend_shadow = {
+		equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_ADD},
+		function: {color_src:gl.ZERO, color_dst:gl.ONE, alpha_src:gl.ZERO, alpha_dst:gl.ZERO},
+	};
+	
+	const ctx = {
+		gl: gl,
+		light_material: {
+			shader: create_shader(gl, light_vshader, light_fshader),
+			vbuffer: create_vbuffer(gl, LIGHT_SPRITE_VERTS),
+			blend: blend_light,
+			attrib_stride: 16, attribs: [
+				{name: "a_vertex", size: 2, offset: 0},
+				{name: "a_uv", size: 2, offset: 8},
+			],
+		},
+		shadow_material: {
+			shader: create_shader(gl, shadow_vshader, shadow_fshader),
+			vbuffer: create_vbuffer(gl, SHADOW_VERTS),
+			blend: blend_shadow,
+			attrib_stride: 12, attribs: [
+				{name: "a_vertex", size: 3, offset: 0},
+			],
+		},
+	};
+	
+	draw(ctx);
+}
+
+function draw(ctx){
+	const gl = ctx.gl;
+	
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	// Draw the shadow mask first.
+	bind_material(gl, ctx.shadow_material, [
+		{name: "u_matrix", type: UNIFORM.mat4, value: mat4_trs(0, 0, 0, 1)},
+		{name: "u_light_position", type: UNIFORM.vec2, value: [-1, 0]}
+	]);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+	// Draw a yellow light sprite on the left.
+	bind_material(gl, ctx.light_material, [
+		{name: "u_color", type: UNIFORM.vec3, value: [1, 1, 0]},
+		{name: "u_matrix", type: UNIFORM.mat4, value: mat4_trs(-1, 0, 0, 2)},
+	]);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	
+	// Draw the shadow mask first.
+	bind_material(gl, ctx.shadow_material, [
+		{name: "u_matrix", type: UNIFORM.mat4, value: mat4_trs(0, 0, 0, 1)},
+		{name: "u_light_position", type: UNIFORM.vec2, value: [1, -1]}
+	]);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+	// Draw a cyan light sprite in the lower right.
+	bind_material(gl, ctx.light_material, [
+		{name: "u_color", type: UNIFORM.vec3, value: [0, 1, 1]},
+		{name: "u_matrix", type: UNIFORM.mat4, value: mat4_trs(1, -1, 0, 3)},
+	]);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// The rest is just boring WebGL stuff... It's simple, but not very efficient.
+// No attempt is made to avoid cache anything or avoid redundant state changes.
+// Also this is the first JS I've written in like 10 years, feel free to judge it. :p
+
+function mat4_trs(x, y, rotate, scale){
+	const c = scale*Math.cos(rotate);
+	const s = scale*Math.sin(rotate);
+	return [
+		c, -s, 0, 0,
+		s,  c, 0, 0,
+		0,  0, 1, 0,
+		x,  y, 0, 1,
+	];
+}
+
+const UNIFORM = {
+	vec2: function(gl, loc, value){gl.uniform2fv(loc, value);},
+	vec3: function(gl, loc, value){gl.uniform3fv(loc, value);},
+	mat4: function(gl, loc, value){gl.uniformMatrix4fv(loc, false, value);},
+};
+
+function bind_material(gl, material, uniforms){
+	if(material.blend){
+		const blend = material.blend;
+		gl.blendEquationSeparate(blend.equation.color, blend.equation.alpha);
+		const func = blend.function;
+		gl.blendFuncSeparate(func.color_src, func.color_dst, func.alpha_src, func.alpha_dst);
+		gl.enable(gl.BLEND);
+	} else {
+		gl.disable(gl.BLEND);
+	}
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, material.vbuffer);
+	for(var i = 0; i < material.attribs.length; i++){
+		const attrib = material.attribs[i];
+		const loc = gl.getAttribLocation(material.shader, attrib.name);
+		gl.vertexAttribPointer(loc, attrib.size, gl.FLOAT, false, material.attrib_stride, attrib.offset);
+		gl.enableVertexAttribArray(loc);
+	}
+	
+	gl.useProgram(material.shader);
+	for(var i = 0; i < uniforms.length; i++){
+		const uniform = uniforms[i];
+		uniform.type(gl, gl.getUniformLocation(material.shader, uniform.name), uniform.value);
+	}
+}
+
+function create_shader(gl, light_vshader, light_fshader) {
+	function compile(gl, type, source) {
+		const shader = gl.createShader(type);
+		gl.shaderSource(shader, source);
+		gl.compileShader(shader);
+
+		if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
+			alert('Failed to compile shader: ' + gl.getShaderInfoLog(shader));
+			gl.deleteShader(shader);
+			return null;
+		} else {
+			return shader;
+		}
+	}
+	
+	const vshader = compile(gl, gl.VERTEX_SHADER, light_vshader);
+	const fshader = compile(gl, gl.FRAGMENT_SHADER, light_fshader);
+
+	const shader = gl.createProgram();
+	gl.attachShader(shader, vshader);
+	gl.attachShader(shader, fshader);
+	gl.linkProgram(shader);
+
+	if (!gl.getProgramParameter(shader, gl.LINK_STATUS)) {
+		alert('Unable to initialize the shader shader: ' + gl.getProgramInfoLog(shader));
+		gl.deleteShader(vshader);
+		gl.deleteShader(fshader);
+		gl.deleteProgram(shader);
+		return null;
+	} else {
+		return shader;
+	}
+}
+
+function create_vbuffer(gl, vertexes){
+	const vbuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, vertexes, gl.STATIC_DRAW);
+	
+	return vbuffer;
+}
+
+main();
+</script>
