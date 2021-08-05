@@ -61,11 +61,11 @@ quad_vertex[3] = endpoint[1] + 100*(endpoint[1] - light_position)
 
 This will project the shadows a finite distance from the line segment endpoints, in this case 100x further away. While this is easy to understand, if the shadow moves very close to the light, then the other edge of the shadow can become visible onscreen. You could just multiply by a larger number... but wouldn't it be better if you could multiply by infinity here? Well it's possible, and it's actually simpler!
 
-# Infinite Homogenous Coordinates
+# Infinite Homogeneous Coordinates
 
-One of the fundamental concepts computer graphics is built on is homogenous coordinates. Basically, they are your familiar cartesian coordinates, but they add an additional "w" coordinate. So if you have a homogenous coordinate `(x, y, z, w)` you can convert it to "normal" coordinates by dividing the _x_, _y_, and _z_ parts by _w_. This might seem weird and arbitrary, but it allows you to represent translation and perspective with matrix transforms. This subject goes surprisingly deep, but that's well out of the scope of this article. ;)
+One of the fundamental concepts computer graphics is built on is homogeneous coordinates. Basically, they are your familiar cartesian coordinates, but they add an additional "w" coordinate. So if you have a homogeneous coordinate `(x, y, z, w)` you can convert it to "normal" coordinates by dividing the _x_, _y_, and _z_ parts by _w_. This might seem weird and arbitrary, but it allows you to represent translation and perspective with matrix transforms. This subject goes surprisingly deep, but that's well out of the scope of this article. ;)
 
-One neat property of homogenous coordinates is what happens when _w_ is zero. Say you have the coordinate `(x, y, z, w)`. If you convert that to regular coordinates you get `(x/w, y/w, z/w)`. Now normally when specifying regular coordinates, you'd use `w = 1`. If you made _w_ smaller than 1, then the converted coordinate would get bigger, but would still point in the same direction compared to the origin. The smaller you make _w_, the further away the coordinate gets. It might seem weird that _w_ could be zero since that's division by zero, but that's only when converting to regular coordinates. The math works out just fine as long as you stay in homogenous coordinates, and it represents a point at infinity in the direction of the _x_, _y_, _z_ part. This is exactly what we wanted above: a way to project the other side of the shadow off to infinity. Fortunately, since this comes up a lot in 3D graphics APIs support it, and hardware is guaranteed to understand what it means.
+One neat property of homogeneous coordinates is what happens when _w_ is zero. Say you have the coordinate `(x, y, z, w)`. If you convert that to regular coordinates you get `(x/w, y/w, z/w)`. Now normally when specifying regular coordinates, you'd use `w = 1`. If you made _w_ smaller than 1, then the converted coordinate would get bigger, but would still point in the same direction compared to the origin. The smaller you make _w_, the further away the coordinate gets. It might seem weird that _w_ could be zero since that's division by zero, but that's only when converting to regular coordinates. The math works out just fine as long as you stay in homogeneous coordinates, and it represents a point at infinity in the direction of the _x_, _y_, _z_ part. This is exactly what we wanted above: a way to project the other side of the shadow off to infinity. Fortunately, since this comes up a lot in 3D graphics APIs support it, and hardware is guaranteed to understand what it means.
 
 Rewriting the code above to use infinite projection would look something like the following.
 ```
@@ -75,11 +75,11 @@ quad_vertex[2] = float4(endpoint[0] - light_position, 0, 0)
 quad_vertex[3] = float4(endpoint[1] - light_position, 0, 0)
 ```
 
-3D graphics APIs support homogenous coordinates natively, although 2D graphics APIs generally do not. You can always fall back to the finite projection code above if needed.
+3D graphics APIs support homogeneous coordinates natively, although 2D graphics APIs generally do not. You can always fall back to the finite projection code above if needed.
 
 # GPU Accelerated Shadows
 
-The biggest CPU cost you'll run into when rendering shadows is setting up the geometry for all the shadow quads. If you have 1000 shadow segments and 10 lights, you'll need to calculate and submit 10,000 quads. While that's not a lot, you can see how quickly it can add up. Ideally what you want to do is to just copy the shadow data once to the GPU one and reuse it for all the lights.
+The biggest CPU cost you'll run into when rendering shadows is setting up the geometry for all the shadow quads. If you have 1000 shadow segments and 10 lights, you'll need to calculate and submit 10,000 quads. While that's not a lot, you can see how quickly it can add up. Ideally what you want to do is to just copy the shadow data once to the GPU and reuse the same buffer for all the lights.
 
 ```
 // On the CPU, pack the quad data similarly to before, but as float3.
@@ -89,7 +89,7 @@ quad_vertex[1] = float3(endpoint[1], 0)
 quad_vertex[2] = float3(endpoint[0], 1)
 quad_vertex[3] = float3(endpoint[1], 1)
 
-// In the vertex shader, use the z-value to output a homogenous coordinate.
+// In the vertex shader, use the z-value to output a homogeneous coordinate.
 output_position = float4(vertex.xy - vertex.z*light_position, 0, 1 - vertex.z)
 ```
 
@@ -162,7 +162,7 @@ The 2D lightmap effect can work with games with parallax scrolling. Although dep
 
 # Isometric
 
-It can also work really well with isometric games with same caveats. The main issue is that the lighting really only works on a single plane, and you probably want that to be the ground. Here's an example from Super Fast Soft Shadows. (our old Unity Asset) There are several tricks here to hide the 2D nature of the lighting:
+It can also work really well with isometric games with some caveats. The main issue is that the lighting really only works on a single plane, and you probably want that to be the ground. Here's an example from Super Fast Soft Shadows (our old Unity Asset) There are several tricks here to hide the 2D nature of the lighting:
 
 * The shadow polygon is just a circle, the cross section of the tree at ground level.
 * The lighting on the trunk is projected downwards and sampled only at the base of the sprite.
