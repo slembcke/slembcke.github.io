@@ -25,12 +25,12 @@
      showgrid="false"
      width="512mm"
      inkscape:zoom="0.69664703"
-     inkscape:cx="935.19383"
+     inkscape:cx="935.19382"
      inkscape:cy="535.42179"
      inkscape:window-width="2395"
      inkscape:window-height="2123"
-     inkscape:window-x="20"
-     inkscape:window-y="20"
+     inkscape:window-x="26"
+     inkscape:window-y="23"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
@@ -124,26 +124,37 @@
          style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
          x="307.2352"
          y="157.75758"
-         id="tspan64128">pixels outside of the light's radius!</tspan></text>
+         id="tspan64128">pixels outside of the light's area!</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="130.76979"
-       y="179.38658"
+       x="128.58151"
+       y="204.35812"
        id="text76907"><tspan
          sodipodi:role="line"
          id="tspan76905"
          style="stroke-width:0.264583"
-         x="130.76979"
-         y="179.38658">Set the scissor rect to match</tspan><tspan
+         x="128.58151"
+         y="204.35812">Set the scissor</tspan><tspan
          sodipodi:role="line"
          style="stroke-width:0.264583"
-         x="130.76979"
-         y="192.61571"
-         id="tspan76909">the light's size.</tspan></text>
+         x="128.58151"
+         y="217.58725"
+         id="tspan76909">rect to match</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="128.58151"
+         y="230.81638"
+         id="tspan7786">the light's</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="128.58151"
+         y="244.0455"
+         id="tspan22639">screen bounds.</tspan></text>
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.52916667;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
-       d="m 191.01038,170.20916 -5.38686,-14.40849"
-       id="path78674" />
+       style="fill:none;stroke:#000000;stroke-width:0.529167;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 176.72948,194.32023 0.25518,-36.97664"
+       id="path78674"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>

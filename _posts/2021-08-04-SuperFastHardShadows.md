@@ -47,11 +47,11 @@ Generally speaking, there isn't a "clear the alpha" function in graphics APIs. Y
 
 # Shadow Projection Made Easy
 
-In order to draw the shadow mask, you have to take those line segments that surround all of your shadow casting surfaces, and project them away from the light's origin. This turns each segment into a quad that covers the area occupied by the shadow. Two of the vertexes of this quad are just the endpoints of the line segment. To figure out where the other two go, imagine lines going from the light's center to each endpoint. The other vertexes need to be put somewhere on those lines. It doesn't really matter where as long as they are far enough away that the opposite edge of the shadow quad isn't visible onscreen.
+In order to draw the shadow mask, you have to take those line segments that surround all of your shadow casting surfaces, and project them away from the light's origin. This turns each segment into a quad that covers the area occupied by the shadow. Two of the vertexes of this quad are just the endpoints of the line segment. To figure out where the other two go, imagine lines going from the light's origin to each endpoint. The other vertexes need to be put somewhere on those lines. It doesn't really matter where as long as they are far enough away that the opposite edge of the shadow quad isn't visible onscreen.
 
 ![shadow projection](/images/lighting-2d/shadow-projection.svg)
 
-This looks something like this in code:
+That looks something like the following in code:
 ```
 quad_vertex[0] = endpoint[0]
 quad_vertex[1] = endpoint[1]
@@ -93,7 +93,7 @@ quad_vertex[3] = float3(endpoint[1], 1)
 output_position = float4(vertex.xy - vertex.z*light_position, 0, 1 - vertex.z)
 ```
 
-Now to draw a light, all you need to do is to pass the `light_position` to the shader and draw the shared shadow geometry!
+Now to draw the shadow mask for a light, all you need to do is to pass the `light_position` to the shader and draw the shared shadow geometry!
 
 To further simplify the CPU's work, you could use instancing to render the shadow quads. Pass the segment endpoints as instance data, and use it to move the vertexes of a instanced quad around. Though instancing very tiny meshes like this is generally not optimal for a GPU, it tends to be way faster than the extra copying the CPU needs to do. Static geometry can always just be cached and submitted once ahead of time.
 
@@ -114,7 +114,7 @@ Even though it's "just 2D", drawing too many pixels like this can easily tank yo
 
 # Not Every Light Needs Shadows
 
-The easiest optimization is to simply skip steps 1.1 & 1.2 for lights that don't need to cast shadows. This is particularly useful for small lights as those steps end up drawing a lot of unnecessary pixels if you aren't using the scissor test optimization.
+The easiest optimization is to simply skip the alpha clear and shadow mask steps for lights that don't need to cast shadows. This is particularly useful for small lights as those steps end up drawing a lot of unnecessary pixels if you aren't using the scissor test optimization.
 
 # Backface Culling
 
@@ -146,11 +146,11 @@ Scissor testing allows you to limit drawing to a certain area of the screen. Thi
 
 For simple scenes, you can get away without having any sort of culling, but as your levels get larger you may need to consider it at some point. The obvious place to start is to make a list of which lights are visible onscreen. A bounds check is significantly cheaper than the multiple draw calls it takes to render a single light with shadows. Also, don't go crazy with spatial indexes here. For a list of hundreds of lights that will be updated and queried once per frame it can be hard to beat the raw, cache friendly performance of a boring packed array of bounds and a linear search.
 
-If your shadow geometry is all static, you'll almost definitely want to load it onto the GPU once and leave it there. Otherwise I would try and stick to batching all of the shadow geometry together each frame for simplicity. If you really need to cull it, try to do it coarsely. Break your static geometry into large chunks that can be copied quickly and simply. To determine which shadow casting objects are visible, take the union of the screen rect and the centers of all the visible lights. This rectangle will be a reasonable lower bound for anything that can cast shadows onto the screen.
+If your shadow geometry is all static, you'll almost definitely want to load it onto the GPU once and leave it there. Otherwise I would try and stick to batching all of the shadow geometry together each frame for simplicity. If you really need to cull it, try to do it coarsely. Break your static geometry into large chunks that can be copied quickly and simply. To determine which shadow casting objects are visible, take the union of the screen rect and the origins of all the visible lights. This rectangle will be a reasonable lower bound for anything that can cast shadows onto the screen.
 
 ![simple culling](/images/lighting-2d/simple-culling.svg)
 
-In the diagram above, objects A and B are inside the expanded rect and could cast visible shadows while object C cannot. There is no way to draw a line from a light through it and end up onscreen for it to cast a shadow. This rect is obviously not a tight bound though. For instance, even though object A is onscreen it's not close enough to a light to actually cast a visible shadow. You don't need a perfect bound. A few false positives aren't that big of a problem.
+In the diagram above, objects _A_ and _B_ are inside the expanded rect and could cast visible shadows while object _C_ cannot. There is no way to draw a line from a light through it and end up onscreen for it to cast a shadow. This rect is obviously not a tight bound though. For instance, even though object _A_ is onscreen it's not close enough to a light to actually cast a visible shadow. You don't need a perfect bound. A few false positives aren't that big of a problem.
 
 ## What about games that aren't quite 2D?
 
@@ -158,7 +158,7 @@ In the diagram above, objects A and B are inside the expanded rect and could cas
 
 # Parallax
 
-The 2D lightmap effect can work with games with parallax scrolling. Although depending on how you want your layers to work, you might end up having to render a separate lightmap for each layer with different settings (maybe with no shadows) and matching offsets. Like any good approximation, it really requires you to stay within certain limitations.
+The 2D lightmap effect can work with games with parallax scrolling. Although depending on how you want your layers to work, you might end up having to render a separate lightmap for each layer with different settings (ex: lights, but no shadows on the foreground) and matching offsets. Like any good approximation, it really requires you to stay within certain limitations.
 
 # Isometric
 
@@ -175,7 +175,7 @@ Apologies for the prototyping art. I'm almost done with the article and running 
 
 ![isometric projection](/images/lighting-2d/isometric-projection.png)
 
-Supporting isometric games this way is a bit of a hack, but it can certainly work well if you stay within the limitations.
+Supporting isometric games this way is a bit of a hack, but again it can certainly work well if you stay within the limitations.
 
 # Isometric #2
 
