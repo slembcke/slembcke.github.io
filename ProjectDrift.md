@@ -17,4 +17,5 @@ This is from a prototype a made a few years ago. Unfortunately I didn't make a l
 
 # Related Blog Posts:
 
-* [Drift Job System]({% post_url 2020-08-28-DriftJobs %})
+* [Drift Job System](DriftJobs)
+* [Drift Rendering](/Drift-Renderer)
