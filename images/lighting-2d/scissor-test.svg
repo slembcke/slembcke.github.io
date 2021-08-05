@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512mm"
+   height="256mm"
+   viewBox="0 0 512 256"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   sodipodi:docname="scissor-test.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     width="512mm"
+     inkscape:zoom="0.69664703"
+     inkscape:cx="935.19383"
+     inkscape:cy="535.42179"
+     inkscape:window-width="2395"
+     inkscape:window-height="2123"
+     inkscape:window-x="20"
+     inkscape:window-y="20"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#121212;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       d="M 222.31199,71.168325 520.46552,41.043944 518.401,264.59786 187.78547,106.80034 h 34.52652 z"
+       id="path54331" />
+    <path
+       style="fill:#121212;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       d="m 350.55762,46.668877 174.3779,-28.428057 0.91476,138.35244 -175.29266,-24.71863 h 25.75229 V 46.668877 Z"
+       id="path54333"
+       sodipodi:nodetypes="ccccccc" />
+    <path
+       style="fill:#121212;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       d="m 232.13282,219.2048 43.16111,62.52398 95.06354,-16.44065 -103.69814,-81.71535 v 35.63202 z"
+       id="path54467" />
+    <path
+       style="fill:#121212;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       d="M 106.77808,128.87218 9.9806282,280.03981 113.0977,285.84419 128.10339,166.3547 h -21.32531 v -37.48252"
+       id="path54469" />
+    <g
+       id="g53254-9"
+       transform="matrix(0.54642681,0,0,0.54642681,-85.991799,29.26388)"
+       style="stroke-width:1.83007">
+      <ellipse
+         style="fill:#f9ff11;fill-opacity:1;stroke:#f8ab00;stroke-width:0.968412;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.900536"
+         id="path868-6"
+         cy="98.28051"
+         cx="408.15466"
+         rx="3.8042269"
+         ry="3.8042259" />
+      <circle
+         style="fill:none;stroke:#faa700;stroke-width:0.968412;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.874717"
+         id="path1008-2"
+         cx="408.15466"
+         cy="98.28051"
+         r="129.10788" />
+    </g>
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#fa0000;stroke-width:0.396875;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1768-9-8"
+       width="21.325315"
+       height="37.482529"
+       x="106.77808"
+       y="128.87218" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#fa0000;stroke-width:0.396875;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1768-9-8-1"
+       width="34.526516"
+       height="35.632011"
+       x="187.78548"
+       y="71.168327" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#fa0000;stroke-width:0.396875;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1768-9-8-1-7"
+       width="34.526516"
+       height="35.632011"
+       x="232.13283"
+       y="183.57278" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#fa0000;stroke-width:0.396875;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1768-9-8-1-7-8"
+       width="25.752291"
+       height="85.20575"
+       x="350.55762"
+       y="46.668877" />
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.52916667;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect54822"
+       width="142.11172"
+       height="141.72748"
+       x="65.415306"
+       y="12.623746" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="307.2352"
+       y="144.52846"
+       id="text59440"><tspan
+         sodipodi:role="line"
+         id="tspan59438"
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="307.2352"
+         y="144.52846">No point masking or clearing</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="307.2352"
+         y="157.75758"
+         id="tspan64128">pixels outside of the light's radius!</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="130.76979"
+       y="179.38658"
+       id="text76907"><tspan
+         sodipodi:role="line"
+         id="tspan76905"
+         style="stroke-width:0.264583"
+         x="130.76979"
+         y="179.38658">Set the scissor rect to match</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="130.76979"
+         y="192.61571"
+         id="tspan76909">the light's size.</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.52916667;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 191.01038,170.20916 -5.38686,-14.40849"
+       id="path78674" />
+  </g>
+</svg>

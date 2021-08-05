@@ -1,6 +1,9 @@
 update:
 	bundler install
 
+clean: build
+	bundler exec jekyll clean
+
 build: build
 	bundler exec jekyll build
 
