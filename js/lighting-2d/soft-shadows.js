@@ -28,7 +28,7 @@ const LIGHT_FSHADER = (`
     // A nice radial gradient with quadratic falloff.
     lowp float brightness = max(0.0, 1.0 - pow(dot(v_uv, v_uv), 0.25));
     gl_FragColor = vec4(brightness*u_color, 1.0);
-		gl_FragColor = vec4(1, 1, 1, 1);
+    gl_FragColor = vec4(1, 1, 1, 1);
   }
 `);
 
@@ -42,26 +42,83 @@ const LIGHT_SPRITE_VERTS = new Float32Array([
 ]);
 
 const SHADOW_VSHADER = (`
-  attribute vec3 a_vertex;
+  attribute vec4 a_segment;
   attribute vec2 a_shadow_coord;
   
   uniform mat4 u_matrix;
   uniform vec2 u_light_position;
+  
+  varying vec4 v_penumbras;
+  
+  mat2 adjugate2x2(vec2 axis_x, vec2 axis_y){
+    mat2 m = mat2(axis_x, axis_y);
+    return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);
+  }
 
+  mat2 inverse2x2(vec2 axis_x, vec2 axis_y){
+    mat2 m = mat2(axis_x, axis_y);
+    return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0])/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
+  }
+  
   void main(){
-    highp vec2 pos = mix(vec2(-0.2, 0.0), vec2(0.2, 0.0), a_shadow_coord.x);
-    highp vec2 position = (u_matrix*vec4(pos, 0.0, 1.0)).xy;
+    vec2 endpoint_a = a_segment.zw;
+    vec2 endpoint_b = a_segment.xy;
+    float light_radius = 0.4;
+    float flip = 1.0;
     
-    highp float w = a_shadow_coord.y;
-    gl_Position = vec4(position - u_light_position*w, 0, 1.0 - w);
+    // Deltas from the segment to the light.
+    vec2 endpoint = mix(endpoint_a, endpoint_b, a_shadow_coord.x);
+    vec2 delta_a = endpoint_a - u_light_position;
+    vec2 delta_b = endpoint_b - u_light_position;
+    vec2 delta = endpoint - u_light_position;
+    
+    // Offsets from the light to the edge of the light volume.
+    vec2 offset_a = flip*vec2(-light_radius,  light_radius)*normalize(delta_a).yx;
+    vec2 offset_b = flip*vec2( light_radius, -light_radius)*normalize(delta_b).yx;
+    vec2 offset = mix(offset_a, offset_b, a_shadow_coord.x);
+    
+    // Vertex projection.
+    float w = a_shadow_coord.y;
+    vec2 swept_edge = delta - offset;
+    vec3 proj_pos = vec3(mix(swept_edge, endpoint, w), w);
+    gl_Position = vec4(proj_pos.xy, 0, w);
     gl_Position.x *= 0.75;
+    
+    vec2 penumbra_a =  adjugate2x2(offset_a, delta_a)*mix(swept_edge, delta - delta_a, w);
+    vec2 penumbra_b = -adjugate2x2(offset_b, delta_b)*mix(swept_edge, delta - delta_b, w);
+    v_penumbras = (light_radius > 0.0 ? vec4(penumbra_a, penumbra_b) : vec4(0, 0, 1, 1));
+
+    // Clipping values.
+    vec2 seg_delta = endpoint_b - endpoint_a;
+    vec2 seg_normal = seg_delta.yx*vec2(-1.0, 1.0);
+    // v_edges.xy = mul(inverse2x2(seg_delta, delta_a + delta_b), delta - offset*(1 - w));
+    // v_edges.y *= 2.0;
+    // v_edges.z = flip*dot(seg_normal, swept_edge)*(1 - w);
+
+    // deltas for light penetration.
+    float light_penetration = 0.1;
+    // v_light_position = vec4(proj_pos.xy, 0.0, w*light_penetration);
+    // v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
   }
 `);
 
 // The fragment shader just has to output black. Easy.
 const SHADOW_FSHADER = (`
+  varying mediump vec4 v_penumbras;
+  
   void main(){
-    gl_FragColor = vec4(0.0);
+    // // Light penetration.
+    // float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
+    // vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
+    // vec2 penetration = closest_p - v_light_position.xy/v_light_position.w;
+    // float attenuation = min(dot(penetration, penetration), 1);
+
+    // Penumbra mixing.
+    mediump vec2 penumbras = smoothstep(-1.0, 1.0, -v_penumbras.xz/v_penumbras.yw);
+    penumbras *= step(v_penumbras.yw, vec2(0.0));
+    
+    // return v_opacity*attenuation*occlusion*step(v_edges.z, 0.0);
+    gl_FragColor = vec4(vec3(penumbras[0] + penumbras[1]), 1.0);
   }
 `);
 
@@ -79,29 +136,11 @@ function main() {
     return;
   }
   
-  // Convert the shadow polyline into a vertex buffer of shadow geometry.
-  // Each vertex is output twice, one needs a z-value of 0.0, and the other 1.0.
-  // const shadow_verts = new Float32Array(6*SHADOW_POLYLINE.length);
-  // for(var i in SHADOW_POLYLINE){
-  //   const v = SHADOW_POLYLINE[i];
-  //   const idx = 6*i;
-    
-  //   // Output the first vertex. (x, y, z)
-  //   shadow_verts[idx + 0] = v.x;
-  //   shadow_verts[idx + 1] = v.y;
-  //   shadow_verts[idx + 2] = 0.0;
-    
-  //   // Output the second vertex. (x, y, z)
-  //   shadow_verts[idx + 3] = v.x;
-  //   shadow_verts[idx + 4] = v.y;
-  //   shadow_verts[idx + 5] = 1.0;
-  // }
-  
   const shadow_verts = new Float32Array([
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 1.0, 1.0, 0.0, 1.0,
-    1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-    1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+    -0.2, 0.0, 0.2, 0.0, 0.0, 0.0,
+    -0.2, 0.0, 0.2, 0.0, 0.0, 1.0,
+    -0.2, 0.0, 0.2, 0.0, 1.0, 0.0,
+    -0.2, 0.0, 0.2, 0.0, 1.0, 1.0,
   ]);
   
   // This blend mode applies the shadow to the light, accumulates it, and resets the alpha.
@@ -118,7 +157,7 @@ function main() {
   // You could also do this with a write mask if that's supported.
   const blend_shadow = {
     equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_ADD},
-    function: {color_src:gl.ZERO, color_dst:gl.ONE, alpha_src:gl.ZERO, alpha_dst:gl.ZERO},
+    function: {color_src:gl.ONE, color_dst:gl.ONE, alpha_src:gl.ZERO, alpha_dst:gl.ZERO},
   };
   
   // Bundle up all of rendering data we need...
@@ -138,7 +177,7 @@ function main() {
       vbuffer: create_vbuffer(gl, shadow_verts),
       blend: blend_shadow,
       attrib_stride: 4*6, attribs: [
-        {name: "a_vertex", size: 3, offset: 4*0},
+        {name: "a_segment", size: 4, offset: 4*0},
         {name: "a_shadow_coord", size: 2, offset: 4*4},
       ],
     },
