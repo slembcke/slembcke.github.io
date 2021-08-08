@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "Fast Soft Shadows for 2D"
-description: ""
-date: 2020-01-01 12:00:00 -0500
+title: "2D Lighting with Soft Shadows"
+description: "Extending the hard shadow technique with accurate penumbras."
+date: 2021-08-04 12:00:00 -0500
 #categories: jekyll update
-permalink: 
+permalink: SuperFastSoftShadows
 ---
 
 <!--
@@ -20,3 +20,7 @@ Light penetration
 Gradient precision issues
 Fixing negative HDR mask values
 -->
+
+<canvas id="glcanvas" width="640" height="480"></canvas>
+<script src="/js/lighting-2d/soft-shadows.js" defer></script>
+[WebGL example source code](/js/lighting-2d/soft-shadows.js)
