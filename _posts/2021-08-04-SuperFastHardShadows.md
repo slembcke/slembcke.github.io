@@ -53,10 +53,10 @@ In order to draw the shadow mask, you have to take those line segments that surr
 
 That looks something like the following in code:
 ```
-quad_vertex[0] = endpoint[0]
-quad_vertex[1] = endpoint[1]
-quad_vertex[2] = endpoint[0] + 100*(endpoint[0] - light_position)
-quad_vertex[3] = endpoint[1] + 100*(endpoint[1] - light_position)
+quad_vertex[0] = segment.a
+quad_vertex[1] = segment.a + 100*(segment.a - light_position)
+quad_vertex[2] = segment.b
+quad_vertex[3] = segment.b + 100*(segment.b - light_position)
 ```
 
 This will project the shadows a finite distance from the line segment endpoints, in this case 100x further away. While this is easy to understand, if the shadow moves very close to the light, then the other edge of the shadow can become visible onscreen. You could just multiply by a larger number... but wouldn't it be better if you could multiply by infinity here? Well it's possible, and it's actually simpler!
@@ -69,10 +69,10 @@ One neat property of homogeneous coordinates is what happens when _w_ is zero. S
 
 Rewriting the code above to use infinite projection would look something like the following.
 ```
-quad_vertex[0] = float4(endpoint[0], 0, 1)
-quad_vertex[1] = float4(endpoint[1], 0, 1)
-quad_vertex[2] = float4(endpoint[0] - light_position, 0, 0)
-quad_vertex[3] = float4(endpoint[1] - light_position, 0, 0)
+quad_vertex[0] = float4(segment.a, 0, 1)
+quad_vertex[1] = float4(segment.a - light_position, 0, 0)
+quad_vertex[2] = float4(segment.b, 0, 1)
+quad_vertex[3] = float4(segment.b - light_position, 0, 0)
 ```
 
 3D graphics APIs support homogeneous coordinates natively, although 2D graphics APIs generally do not. You can always fall back to the finite projection code above if needed.
@@ -84,10 +84,10 @@ The biggest CPU cost you'll run into when rendering shadows is setting up the ge
 ```
 // On the CPU, pack the quad data similarly to before, but as float3.
 // The z-value defines if a vertex is on the near or far side of the shadow.
-quad_vertex[0] = float3(endpoint[0], 0)
-quad_vertex[1] = float3(endpoint[1], 0)
-quad_vertex[2] = float3(endpoint[0], 1)
-quad_vertex[3] = float3(endpoint[1], 1)
+quad_vertex[0] = float3(segment.a, 0)
+quad_vertex[1] = float3(segment.a, 1)
+quad_vertex[2] = float3(segment.b, 0)
+quad_vertex[3] = float3(segment.b, 1)
 
 // In the vertex shader, use the z-value to output a homogeneous coordinate.
 output_position = float4(vertex.xy - vertex.z*light_position, 0, 1 - vertex.z)
@@ -95,9 +95,31 @@ output_position = float4(vertex.xy - vertex.z*light_position, 0, 1 - vertex.z)
 
 Now to draw the shadow mask for a light, all you need to do is to pass the `light_position` to the shader and draw the shared shadow geometry!
 
-To further simplify the CPU's work, you could use instancing to render the shadow quads. Pass the segment endpoints as instance data, and use it to move the vertexes of a instanced quad around. Though instancing very tiny meshes like this is generally not optimal for a GPU, it tends to be way faster than the extra copying the CPU needs to do. Static geometry can always just be cached and submitted once ahead of time.
-
 As a final thought, although platforms that don't support shaders are vanishingly rare now, it's entirely possible to do the same infinite projection with just a special perspective matrix. This is actually how I first figured out how to do the hard shadowing effect, and how I made it run well before shaders were widespread.
+
+# Geometry Submission
+
+Indexed triangles are a good and obvious choice for drawing the shadow mask. 3D engines tend to use this for meshes, in which case it might be your best or only option. The only minor downside is the extra code to generate the index buffer, and the extra data you need to move to the GPU.
+
+If you are making your own draw calls, then triangle strips can be a little easier to work with. Given a polyline for your shadow geometry, all you have to do to turn it into a triangle strip is to iterate the vertexes and output `(x, y, 0)` and `(x, y, 1)` pairs. You can even join all of the shadows for your entire scene into a single strip using degenerate geometry. Basically, you repeat the first and last vertexes, but don't project them. This adds triangles that are collapsed so they only have 2 distinct points, and so no area on screen to cover any pixels. These degenerate triangles cost very little on the GPU, but can make your CPU side code simpler.
+
+```
+// Output a copy of the first vertex,
+// but use 0 and 0 for the shadow coordinates.
+{x0, y0, 0}, {x0, y0, 0},
+
+// Now output the vertexes doubled up as normal
+// with a 0 and 1 the shadow coordinates.
+{x0, y0, 0}, {x0, y0, 1},
+{x1, y1, 0}, {x1, y1, 1},
+{x2, y2, 0}, {x2, y2, 1},
+{x3, y3, 0}, {x3, y3, 1},
+
+// Output a copy of the last vertex like the first.
+{x3, y3, 0}, {x3, y3, 0},
+```
+
+Another option is to use instancing. Pass the segment endpoints as instance data, and use it to move the vertexes of a instanced quad around. Since you don't need an index buffer or degenerate geometry it makes for a mildly simpler implementation. On the other hand, instancing very tiny meshes like this is generally not optimal for a GPU, and for hard shadows it doesn't really reduce the data size much either. It's probably fine, but don't expect instancing to be faster here.
 
 ## Optional Optimizations
 
