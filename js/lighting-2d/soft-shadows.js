@@ -42,7 +42,7 @@ const SHADOW_VSHADER = (`
   attribute vec4 a_segment;
   attribute vec2 a_shadow_coord;
   
-  uniform mat4 u_matrix; // TODO
+  uniform mat4 u_matrix;
   uniform vec3 u_light;
   
   varying vec4 v_penumbras;
@@ -50,17 +50,18 @@ const SHADOW_VSHADER = (`
   varying vec3 v_light;
   varying vec4 v_endpoints;
   
+  // Keep in mind this is GLSL code. You'll need to swap row/column for HLSL.
   mat2 adjugate(mat2 m){return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);}
   mat2 inverse(mat2 m){return adjugate(m)/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);}
   
   void main(){
-    // Unpack uniforms and transform endpoints.
+    // Unpack the vertex shader input.
     vec2 endpoint_a = (u_matrix*vec4(a_segment.zw, 0.0, 1.0)).xy;
     vec2 endpoint_b = (u_matrix*vec4(a_segment.xy, 0.0, 1.0)).xy;
+    vec2 endpoint = mix(endpoint_a, endpoint_b, a_shadow_coord.x);
     float light_radius = u_light.z;
     
     // Deltas from the segment to the light center.
-    vec2 endpoint = mix(endpoint_a, endpoint_b, a_shadow_coord.x);
     vec2 delta_a = endpoint_a - u_light.xy;
     vec2 delta_b = endpoint_b - u_light.xy;
     vec2 delta = endpoint - u_light.xy;
@@ -72,21 +73,22 @@ const SHADOW_VSHADER = (`
     
     // Vertex projection.
     float w = a_shadow_coord.y;
-    vec2 swept_edge = delta - offset;
-    vec3 proj_pos = vec3(mix(swept_edge, endpoint, w), w);
+    vec3 proj_pos = vec3(mix(delta - offset, endpoint, w), w);
     gl_Position = vec4(proj_pos.xy, 0, w);
     gl_Position.x *= 0.75; // I'm too lazy to use a projection matrix here...
     
-    vec2 penumbra_a = adjugate(mat2( offset_a, -delta_a))*mix(swept_edge, delta - delta_a, w);
-    vec2 penumbra_b = adjugate(mat2(-offset_b,  delta_b))*mix(swept_edge, delta - delta_b, w);
-    v_penumbras = (light_radius > 0.0 ? vec4(penumbra_a, penumbra_b) : vec4(0, 0, 1, 1));
+    vec2 penumbra_a = adjugate(mat2( offset_a, -delta_a))*(delta - mix(offset, delta_a, w));
+    vec2 penumbra_b = adjugate(mat2(-offset_b,  delta_b))*(delta - mix(offset, delta_b, w));
+    v_penumbras = (light_radius > 0.0 ? vec4(penumbra_a, penumbra_b) : vec4(0, 1, 0, 1));
 
     // Edge values for light penetration and clipping.
     vec2 seg_delta = endpoint_b - endpoint_a;
     vec2 seg_normal = seg_delta.yx*vec2(-1.0, 1.0);
     v_edges.xy = inverse(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
     v_edges.y *= 2.0;
-    v_edges.z = dot(seg_normal, swept_edge)*(1.0 - w);
+    // Calculate a clipping coordinate that is 0 at the near edge (when w = 1)...
+    // otherwise calculate the dot product with the projected coordinate.
+    v_edges.z = dot(seg_normal, delta - offset)*(1.0 - w);
 
     // Light penetration values.
     float light_penetration = 0.01;
@@ -110,9 +112,9 @@ const SHADOW_FSHADER = (`
 
     // Penumbra mixing.
     mediump vec2 penumbras = smoothstep(-1.0, 1.0, v_penumbras.xz/v_penumbras.yw);
-    mediump float shadow = 1.0 - dot(penumbras, step(v_penumbras.yw, vec2(0.0)));
+    mediump float penumbra = dot(penumbras, step(v_penumbras.yw, vec2(0.0)));
     
-    gl_FragColor = vec4(bleed*shadow*step(v_edges.z, 0.0));
+    gl_FragColor = vec4(bleed*(1.0 - penumbra)*step(v_edges.z, 0.0));
   }
 `);
 
@@ -167,6 +169,8 @@ function main(){
     -0.2,  0.1, -0.2, -0.1, 0.0, 0.0,
   ]);
   
+  SHADOW_VERTEX_COUNT = shadow_verts.length/6;
+  
   // This blend mode applies the shadow to the light, accumulates it, and resets the alpha.
   // The source color is multiplied by the destination alpha (where the shadow mask has been drawn).
   // The alpha src alpha replaces the destination alpha.
@@ -215,6 +219,7 @@ function main(){
   }
   
   requestAnimationFrame(render_loop);
+	// draw(ctx, 0);
 }
 
 function draw(ctx, time){
@@ -226,7 +231,7 @@ function draw(ctx, time){
   
   // A list of the visible lights we want to draw.
   const lights = [
-    // {x:0, y:-0.1, size: 3, color: [1, 1, 1]},
+    // {x:-0.5, y:0.5, size: 100, radius: 0.4, color: [1, 1, 1]},
     {x:-1, y:-1, size: 2.5, radius: 0.2, color: [1, 1, 0]},
     {x: 1, y:-1, size: 2.5, radius: 0.2, color: [0, 1, 1]},
   ];
@@ -244,7 +249,7 @@ function draw(ctx, time){
       {name: "u_matrix", type: UNIFORM.mat4, value: rectangle_transform},
       {name: "u_light", type: UNIFORM.vec3, value: [light.x, light.y, light.radius]}
     ]);
-    gl.drawArrays(gl.TRIANGLES, 0, 4*6);
+    gl.drawArrays(gl.TRIANGLES, 0, SHADOW_VERTEX_COUNT);
 
     // This is my quick and dirty way of drawing a sprite for the lights.
     // Other than the blending mode, the implementation here is unimportant.

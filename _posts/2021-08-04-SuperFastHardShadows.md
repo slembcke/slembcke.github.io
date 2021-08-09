@@ -138,6 +138,18 @@ If you are making your own draw calls, then triangle strips can be a little easi
 
 Another option is to use instancing. Pass the segment endpoints as instance data, and use it to move the vertexes of a instanced quad around. Since you don't need an index buffer or degenerate geometry it makes for a mildly simpler implementation. On the other hand, instancing very tiny meshes like this is generally not optimal for a GPU, and for hard shadows it doesn't really reduce the data size much either. It's probably fine, but don't expect instancing to be faster here.
 
+# Limitations
+
+requires geometry
+lights overlapping geometry
+(TODO)
+
+# Alternatives
+
+visibility polygons
+image based
+(TODO)
+
 ## Optional Optimizations
 
 At this point you have a very simple, but effective system to draw 2D shadows! The performance isn't ideal in this simplest form however. The more lights and shadow geometry you add, the more optimization you might need.
@@ -224,7 +236,7 @@ Isometric games are also a case where you might _want_ to use a finite projectio
 
 ([source](https://gamedev.stackexchange.com/questions/11683/real-time-shadow-casting-in-a-2d-isometric-game))
 
-## Conclusion
+## Closing Thoughts
 
 That is pretty much everything I know about implementing hard shadows for 2D games. Hopefully it gives you some ideas about how you want to implement them in your own game. In the next article I'll show how to take this idea and extend it to produce fairly accurate soft shadows. Happy illuminating. :)
 
