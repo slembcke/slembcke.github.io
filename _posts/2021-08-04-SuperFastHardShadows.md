@@ -29,6 +29,10 @@ If you want more control over how the lighting is applied, you can either draw i
 
 This lightmap technique is very easy to implement, and even without shadows it's very satisfying. No reason why you can't just stop here and keep it simple if it fits your game well. :)
 
+# Dynamic Range
+
+(TODO)
+
 ## Simple Hard Shadow Geometry
 
 Now we get to the fun part, shadows! It might be just me, but I find shadows in 2D games to be very satisfying to watch. It's the neat effects you get as shadows spill across the floor of a room and none of the boring subtle parts that brains are good at ignoring. :) The easiest and most efficient way to add shadows that I know of is to outline all of your objects in line segments. Though it can be a tedious extra step, it's usually not too bad. If you are using a physics engine, you can probably just reuse your collision data for example. The benefit is that line segments are very efficient for casting shadows and keeps the code simple.

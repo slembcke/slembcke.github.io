@@ -10,10 +10,8 @@ const LIGHT_VSHADER = (`
 
   void main(){
     gl_Position = u_matrix*vec4(a_vertex, 0, 1);
+    gl_Position.x *= 0.75; // I'm too lazy to use a projection matrix here...
     v_uv = a_uv;
-    
-    // I'm too lazy to use a projection matrix here...
-    gl_Position.x *= 0.75;
   }
 `);
 
@@ -28,7 +26,6 @@ const LIGHT_FSHADER = (`
     // A nice radial gradient with quadratic falloff.
     lowp float brightness = max(0.0, 1.0 - pow(dot(v_uv, v_uv), 0.25));
     gl_FragColor = vec4(brightness*u_color, 1.0);
-    gl_FragColor = vec4(1, 1, 1, 1);
   }
 `);
 
@@ -45,36 +42,38 @@ const SHADOW_VSHADER = (`
   attribute vec4 a_segment;
   attribute vec2 a_shadow_coord;
   
-  uniform mat4 u_matrix;
-  uniform vec2 u_light_position;
+  uniform mat4 u_matrix; // TODO
+  uniform vec3 u_light;
   
   varying vec4 v_penumbras;
+  varying vec3 v_edges;
+  varying vec3 v_light;
+  varying vec4 v_endpoints;
   
   mat2 adjugate2x2(vec2 axis_x, vec2 axis_y){
     mat2 m = mat2(axis_x, axis_y);
     return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);
   }
 
-  mat2 inverse2x2(vec2 axis_x, vec2 axis_y){
+  mat2 inverse2x2(vec2 axis_x, vec2 axis_y){ // TODO
     mat2 m = mat2(axis_x, axis_y);
     return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0])/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
   }
   
   void main(){
-    vec2 endpoint_a = a_segment.zw;
-    vec2 endpoint_b = a_segment.xy;
-    float light_radius = 0.4;
-    float flip = 1.0;
+    vec2 endpoint_a = (u_matrix*vec4(a_segment.zw, 0.0, 1.0)).xy;
+    vec2 endpoint_b = (u_matrix*vec4(a_segment.xy, 0.0, 1.0)).xy;
+    float light_radius = u_light.z;
     
     // Deltas from the segment to the light.
     vec2 endpoint = mix(endpoint_a, endpoint_b, a_shadow_coord.x);
-    vec2 delta_a = endpoint_a - u_light_position;
-    vec2 delta_b = endpoint_b - u_light_position;
-    vec2 delta = endpoint - u_light_position;
+    vec2 delta_a = endpoint_a - u_light.xy;
+    vec2 delta_b = endpoint_b - u_light.xy;
+    vec2 delta = endpoint - u_light.xy;
     
     // Offsets from the light to the edge of the light volume.
-    vec2 offset_a = flip*vec2(-light_radius,  light_radius)*normalize(delta_a).yx;
-    vec2 offset_b = flip*vec2( light_radius, -light_radius)*normalize(delta_b).yx;
+    vec2 offset_a = vec2(-light_radius,  light_radius)*normalize(delta_a).yx;
+    vec2 offset_b = vec2( light_radius, -light_radius)*normalize(delta_b).yx;
     vec2 offset = mix(offset_a, offset_b, a_shadow_coord.x);
     
     // Vertex projection.
@@ -82,43 +81,45 @@ const SHADOW_VSHADER = (`
     vec2 swept_edge = delta - offset;
     vec3 proj_pos = vec3(mix(swept_edge, endpoint, w), w);
     gl_Position = vec4(proj_pos.xy, 0, w);
-    gl_Position.x *= 0.75;
+    gl_Position.x *= 0.75; // I'm too lazy to use a projection matrix here...
     
-    vec2 penumbra_a =  adjugate2x2(offset_a, delta_a)*mix(swept_edge, delta - delta_a, w);
-    vec2 penumbra_b = -adjugate2x2(offset_b, delta_b)*mix(swept_edge, delta - delta_b, w);
+    vec2 penumbra_a = adjugate2x2( offset_a, -delta_a)*mix(swept_edge, delta - delta_a, w);
+    vec2 penumbra_b = adjugate2x2(-offset_b,  delta_b)*mix(swept_edge, delta - delta_b, w);
     v_penumbras = (light_radius > 0.0 ? vec4(penumbra_a, penumbra_b) : vec4(0, 0, 1, 1));
 
     // Clipping values.
     vec2 seg_delta = endpoint_b - endpoint_a;
     vec2 seg_normal = seg_delta.yx*vec2(-1.0, 1.0);
-    // v_edges.xy = mul(inverse2x2(seg_delta, delta_a + delta_b), delta - offset*(1 - w));
-    // v_edges.y *= 2.0;
-    // v_edges.z = flip*dot(seg_normal, swept_edge)*(1 - w);
+    v_edges.xy = inverse2x2(seg_delta, delta_a + delta_b)*(delta - offset*(1.0 - w));
+    v_edges.y *= 2.0;
+    v_edges.z = dot(seg_normal, swept_edge)*(1.0 - w);
 
-    // deltas for light penetration.
-    float light_penetration = 0.1;
-    // v_light_position = vec4(proj_pos.xy, 0.0, w*light_penetration);
-    // v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
+    // Deltas for light penetration.
+    float light_penetration = 0.01; // TODO
+    v_light = vec3(proj_pos.xy, w*light_penetration);
+    v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
   }
 `);
 
-// The fragment shader just has to output black. Easy.
 const SHADOW_FSHADER = (`
   varying mediump vec4 v_penumbras;
+  varying mediump vec3 v_edges;
+  varying mediump vec3 v_light;
+  varying mediump vec4 v_endpoints;
   
   void main(){
-    // // Light penetration.
-    // float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
-    // vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
-    // vec2 penetration = closest_p - v_light_position.xy/v_light_position.w;
-    // float attenuation = min(dot(penetration, penetration), 1);
+    // Light penetration.
+    mediump float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
+    mediump vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
+    mediump vec2 penetration = closest_p - v_light.xy/v_light.z;
+    mediump float bleed = min(dot(penetration, penetration), 1.0);
 
     // Penumbra mixing.
-    mediump vec2 penumbras = smoothstep(-1.0, 1.0, -v_penumbras.xz/v_penumbras.yw);
-    penumbras *= step(v_penumbras.yw, vec2(0.0));
+    mediump vec2 penumbras = smoothstep(-1.0, 1.0, v_penumbras.xz/v_penumbras.yw);
+    mediump float shadow = 1.0 - dot(penumbras, step(v_penumbras.yw, vec2(0.0)));
     
-    // return v_opacity*attenuation*occlusion*step(v_edges.z, 0.0);
-    gl_FragColor = vec4(vec3(penumbras[0] + penumbras[1]), 1.0);
+    // return bleed*shadow*step(v_edges.z, 0.0);
+    gl_FragColor = vec4(bleed*shadow*step(v_edges.z, 0.0));
   }
 `);
 
@@ -127,7 +128,7 @@ const SHADOW_POLYLINE = [
   {x:  1.0, y: -0.0},
 ];
 
-function main() {
+function main(){
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl');
 
@@ -137,10 +138,33 @@ function main() {
   }
   
   const shadow_verts = new Float32Array([
-    -0.2, 0.0, 0.2, 0.0, 0.0, 0.0,
-    -0.2, 0.0, 0.2, 0.0, 0.0, 1.0,
-    -0.2, 0.0, 0.2, 0.0, 1.0, 0.0,
-    -0.2, 0.0, 0.2, 0.0, 1.0, 1.0,
+    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0,
+    -0.2, -0.1,  0.2, -0.1, 0.0, 1.0,
+    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0,
+    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0,
+    -0.2, -0.1,  0.2, -0.1, 1.0, 0.0,
+    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0,
+
+     0.2, -0.1,  0.2,  0.1, 0.0, 0.0,
+     0.2, -0.1,  0.2,  0.1, 0.0, 1.0,
+     0.2, -0.1,  0.2,  0.1, 1.0, 1.0,
+     0.2, -0.1,  0.2,  0.1, 1.0, 1.0,
+     0.2, -0.1,  0.2,  0.1, 1.0, 0.0,
+     0.2, -0.1,  0.2,  0.1, 0.0, 0.0,
+
+     0.2,  0.1, -0.2,  0.1, 0.0, 0.0,
+     0.2,  0.1, -0.2,  0.1, 0.0, 1.0,
+     0.2,  0.1, -0.2,  0.1, 1.0, 1.0,
+     0.2,  0.1, -0.2,  0.1, 1.0, 1.0,
+     0.2,  0.1, -0.2,  0.1, 1.0, 0.0,
+     0.2,  0.1, -0.2,  0.1, 0.0, 0.0,
+
+    -0.2,  0.1, -0.2, -0.1, 0.0, 0.0,
+    -0.2,  0.1, -0.2, -0.1, 0.0, 1.0,
+    -0.2,  0.1, -0.2, -0.1, 1.0, 1.0,
+    -0.2,  0.1, -0.2, -0.1, 1.0, 1.0,
+    -0.2,  0.1, -0.2, -0.1, 1.0, 0.0,
+    -0.2,  0.1, -0.2, -0.1, 0.0, 0.0,
   ]);
   
   // This blend mode applies the shadow to the light, accumulates it, and resets the alpha.
@@ -156,8 +180,8 @@ function main() {
   // Shadows should only be drawn into the alpha channel and should leave color untouched.
   // You could also do this with a write mask if that's supported.
   const blend_shadow = {
-    equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_ADD},
-    function: {color_src:gl.ONE, color_dst:gl.ONE, alpha_src:gl.ZERO, alpha_dst:gl.ZERO},
+    equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_REVERSE_SUBTRACT},
+    function: {color_src:gl.ZERO, color_dst:gl.ONE, alpha_src:gl.ONE, alpha_dst:gl.ONE},
   };
   
   // Bundle up all of rendering data we need...
@@ -201,13 +225,13 @@ function draw(ctx, time){
   
   // A list of the visible lights we want to draw.
   const lights = [
-    {x:0, y:-1, size: 2, color: [1, 1, 1]},
-    // {x:-1, y:-1, size: 2, color: [1, 1, 0]},
-    // {x: 1, y:-1, size: 2, color: [0, 1, 1]},
+    // {x:0, y:-0.1, size: 3, color: [1, 1, 1]},
+    {x:-1, y:-1, size: 2.5, radius: 0.2, color: [1, 1, 0]},
+    {x: 1, y:-1, size: 2.5, radius: 0.2, color: [0, 1, 1]},
   ];
   
   // Animate the transform of the box that casts the shadow.
-  const rectangle_transform = mat4_trs(0, 0, 0, 1);
+  const rectangle_transform = mat4_trs(0.3*Math.cos(time), 0.3*Math.sin(time), time, 1);
   
   for(var i in lights){
     const light = lights[i];
@@ -217,9 +241,9 @@ function draw(ctx, time){
     // However, the shadow shader does need the light's position to know where to project from.
     bind_material(gl, ctx.shadow_material, [
       {name: "u_matrix", type: UNIFORM.mat4, value: rectangle_transform},
-      {name: "u_light_position", type: UNIFORM.vec2, value: [light.x, light.y]}
+      {name: "u_light", type: UNIFORM.vec3, value: [light.x, light.y, light.radius]}
     ]);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 2*SHADOW_POLYLINE.length);
+    gl.drawArrays(gl.TRIANGLES, 0, 4*6);
 
     // This is my quick and dirty way of drawing a sprite for the lights.
     // Other than the blending mode, the implementation here is unimportant.

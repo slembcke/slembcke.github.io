@@ -74,7 +74,7 @@ const SHADOW_POLYLINE = [
   {x: -0.2, y: -0.1},
 ];
 
-function main() {
+function main(){
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl');
 
