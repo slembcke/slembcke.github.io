@@ -31,20 +31,20 @@ This lightmap technique is very easy to implement, and even without shadows it's
 
 # Dynamic Range
 
-One problem with lightmaps used this way is the limited dynamic range available when not using an HDR render target to store them. Using forward rendering, an object is effectively lit by calculating:
+One problem with lightmaps is the limited dynamic range when not using an HDR render target for them. Using forward rendering, an object is effectively lit by calculating:
 
 ```
 pixel = color*lights[0] + color*lights[1] + ... + color*lights[n]
 ```
 
-Without HDR, the pixel color is limited to be in the range (0, 1). Even a dim pixel lit by one or more bright lights can be brightened past it's original color value. This is just fine for 2D games unless you are trying to do fancy post-processing effects with over-bright pixels. Now consider what happens with a non-HDR lightmap:
+Without HDR, the pixel color is limited to be in the range [0, 1]. Even a dim pixel lit by one or more bright lights can be brightened past it's original color value though. Now consider what happens with a non-HDR lightmap:
 
 ```
 lightmap = lights[0] + lights[1] + ... + lights[n]
 pixel = color*lightmap
 ```
 
-Now the light value itself is limited to the range [0, 1] which means that scenes that are very dark cannot be brightened past their original color values. Not ideal! The easy fix if supported is to simply enable HDR for your lightmap render target. Another easy option is to simply scale the lightmap intensity. If you are using shaders to apply the lightmap, then you can multiply the light value by 2 for example. Now the lightmap will act twice as bright, and can contain the light values in the range [0, 2]. If you use a multiplier value larger than 2 to 4 you can introduce a lot of banding though. Lastly, if you are just multiplying the whole lightmap over your scene there is an double multiply blending mode you can use to get the same effect. Using OpenGL as an example, `glBlend(GL_DST_COLOR, GL_SRC_COLOR)` means to blend as `src_color*dst_color + dst_color*src_color` which is equivalent to `2*src_color*dst_color`. Same effect, but no shaders required.
+Now the light value itself is limited to the range [0, 1] which means that scenes that are very dark cannot be brightened past their original color values. Not ideal! The easy fix if supported is to simply enable HDR for your lightmap render target. Another easy option is to simply scale the lightmap intensity. If you are using shaders to apply the lightmap, then you can multiply the light value by 2 for example. Now the lightmap will act twice as bright, and can contain the light values in the range [0, 2]. Keep the multiplier small as this can cause a lot of banding though. Lastly, if you are just multiplying the whole lightmap over your scene there is an double multiply blending mode you can use. Using OpenGL as an example, `glBlend(GL_DST_COLOR, GL_SRC_COLOR)` means to blend as `src_color*dst_color + dst_color*src_color` which is equivalent to `2*src_color*dst_color`. You are stuck with a multiplier of 2.0, but no shaders are required.
 
 ## Simple Hard Shadow Geometry
 
