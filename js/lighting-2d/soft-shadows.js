@@ -50,28 +50,22 @@ const SHADOW_VSHADER = (`
   varying vec3 v_light;
   varying vec4 v_endpoints;
   
-  mat2 adjugate2x2(vec2 axis_x, vec2 axis_y){
-    mat2 m = mat2(axis_x, axis_y);
-    return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);
-  }
-
-  mat2 inverse2x2(vec2 axis_x, vec2 axis_y){ // TODO
-    mat2 m = mat2(axis_x, axis_y);
-    return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0])/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
-  }
+  mat2 adjugate(mat2 m){return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);}
+  mat2 inverse(mat2 m){return adjugate(m)/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);}
   
   void main(){
+    // Unpack uniforms and transform endpoints.
     vec2 endpoint_a = (u_matrix*vec4(a_segment.zw, 0.0, 1.0)).xy;
     vec2 endpoint_b = (u_matrix*vec4(a_segment.xy, 0.0, 1.0)).xy;
     float light_radius = u_light.z;
     
-    // Deltas from the segment to the light.
+    // Deltas from the segment to the light center.
     vec2 endpoint = mix(endpoint_a, endpoint_b, a_shadow_coord.x);
     vec2 delta_a = endpoint_a - u_light.xy;
     vec2 delta_b = endpoint_b - u_light.xy;
     vec2 delta = endpoint - u_light.xy;
     
-    // Offsets from the light to the edge of the light volume.
+    // Offsets from the light center to the edge of the light volume.
     vec2 offset_a = vec2(-light_radius,  light_radius)*normalize(delta_a).yx;
     vec2 offset_b = vec2( light_radius, -light_radius)*normalize(delta_b).yx;
     vec2 offset = mix(offset_a, offset_b, a_shadow_coord.x);
@@ -83,19 +77,19 @@ const SHADOW_VSHADER = (`
     gl_Position = vec4(proj_pos.xy, 0, w);
     gl_Position.x *= 0.75; // I'm too lazy to use a projection matrix here...
     
-    vec2 penumbra_a = adjugate2x2( offset_a, -delta_a)*mix(swept_edge, delta - delta_a, w);
-    vec2 penumbra_b = adjugate2x2(-offset_b,  delta_b)*mix(swept_edge, delta - delta_b, w);
+    vec2 penumbra_a = adjugate(mat2( offset_a, -delta_a))*mix(swept_edge, delta - delta_a, w);
+    vec2 penumbra_b = adjugate(mat2(-offset_b,  delta_b))*mix(swept_edge, delta - delta_b, w);
     v_penumbras = (light_radius > 0.0 ? vec4(penumbra_a, penumbra_b) : vec4(0, 0, 1, 1));
 
-    // Clipping values.
+    // Edge values for light penetration and clipping.
     vec2 seg_delta = endpoint_b - endpoint_a;
     vec2 seg_normal = seg_delta.yx*vec2(-1.0, 1.0);
-    v_edges.xy = inverse2x2(seg_delta, delta_a + delta_b)*(delta - offset*(1.0 - w));
+    v_edges.xy = inverse(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
     v_edges.y *= 2.0;
     v_edges.z = dot(seg_normal, swept_edge)*(1.0 - w);
 
-    // Deltas for light penetration.
-    float light_penetration = 0.01; // TODO
+    // Light penetration values.
+    float light_penetration = 0.01;
     v_light = vec3(proj_pos.xy, w*light_penetration);
     v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
   }
@@ -118,15 +112,9 @@ const SHADOW_FSHADER = (`
     mediump vec2 penumbras = smoothstep(-1.0, 1.0, v_penumbras.xz/v_penumbras.yw);
     mediump float shadow = 1.0 - dot(penumbras, step(v_penumbras.yw, vec2(0.0)));
     
-    // return bleed*shadow*step(v_edges.z, 0.0);
     gl_FragColor = vec4(bleed*shadow*step(v_edges.z, 0.0));
   }
 `);
-
-const SHADOW_POLYLINE = [
-  {x:  0.0, y: -0.0},
-  {x:  1.0, y: -0.0},
-];
 
 function main(){
   const canvas = document.querySelector('#glcanvas');
@@ -137,13 +125,25 @@ function main(){
     return;
   }
   
+  // Vertex format is {{a.x, a.y}, {b.x, b.y}, {s.x, s.y}} where:
+  // 'a' is the first endpoint of a shadow casting segment.
+  // 'b' is the seconnd endpoint
+  // 's' is the shadow coordinate, and selects which corner
+  // of the shadow quad this vertex corresponds to.
+  // This makes for a fair amount of redundant vertex data.
+  // Instancing will simplify packing the shadow data, but might be slower.
+  
+  // NOTE: I'm using non-indexed geometry here to avoid adding index
+  // buffer code to an otherwise fairly minimal code example.
+  // This is NOT at all ideal, and you should really prefer
+  // indexed triangles or instancing in your own code.
   const shadow_verts = new Float32Array([
-    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0,
-    -0.2, -0.1,  0.2, -0.1, 0.0, 1.0,
-    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0,
-    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0,
-    -0.2, -0.1,  0.2, -0.1, 1.0, 0.0,
-    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0,
+    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0, // Vertex A
+    -0.2, -0.1,  0.2, -0.1, 0.0, 1.0, // Vertex B
+    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0, // Vertex C
+    -0.2, -0.1,  0.2, -0.1, 1.0, 1.0, // Vertex C
+    -0.2, -0.1,  0.2, -0.1, 1.0, 0.0, // Vertex D
+    -0.2, -0.1,  0.2, -0.1, 0.0, 0.0, // Vertex A
 
      0.2, -0.1,  0.2,  0.1, 0.0, 0.0,
      0.2, -0.1,  0.2,  0.1, 0.0, 1.0,
@@ -172,13 +172,14 @@ function main(){
   // The alpha src alpha replaces the destination alpha.
   // For the accumulate/clear trick to work your light must be opaque,
   // and cover the the whole drawable area (framebuffer or scissor rectangle)
+  // TODO HDR clamp version
   const blend_light = {
     equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_ADD},
     function: {color_src:gl.DST_ALPHA, color_dst:gl.ONE, alpha_src:gl.ONE, alpha_dst:gl.ZERO},
   };
   
   // Shadows should only be drawn into the alpha channel and should leave color untouched.
-  // You could also do this with a write mask if that's supported.
+  // Unlike hard shadows that just black out the alpha, soft shadows are subtracted.
   const blend_shadow = {
     equation: {color: gl.FUNC_ADD, alpha: gl.FUNC_REVERSE_SUBTRACT},
     function: {color_src:gl.ZERO, color_dst:gl.ONE, alpha_src:gl.ONE, alpha_dst:gl.ONE},

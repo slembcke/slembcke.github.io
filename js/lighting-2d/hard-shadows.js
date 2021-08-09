@@ -158,8 +158,8 @@ function draw(ctx, time){
   
   // A list of the visible lights we want to draw.
   const lights = [
-    {x:-1, y:-1, size: 2, color: [1, 1, 0]},
-    {x: 1, y:-1, size: 2, color: [0, 1, 1]},
+    {x:-1, y:-1, size: 2.5, color: [1, 1, 0]},
+    {x: 1, y:-1, size: 2.5, color: [0, 1, 1]},
   ];
   
   // Animate the transform of the box that casts the shadow.
