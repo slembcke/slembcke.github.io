@@ -238,7 +238,7 @@ Last but not least, normal maps are impossible to implement using a lightmap. Al
 
 # Visibility Polygons
 
-Visibility polygons are an alternative to drawing shadow masks. Basically instead of masking off pixels that you don't want the light to affect, you make a polygon that only covers the pixels where a light _can_ reach. This sort of flips the problem inside out. This idea still makes sense if you are using software rendering. The cost to generate the visibility polygon probably outweighs the cost to draw the pixels needed to do shadow masking. If you are using any sort of hardware acceleration, even on the cheapest $5 single board computer, the GPU centric solution presented in this article is probably going to win in both simplicity and performance.
+Visibility polygons are an alternative to drawing shadow masks. Basically instead of masking off pixels that the light _can't_ reach, you make a polygon that only covers the pixels that a light _can_ reach. This sort of flips the problem inside out. This makes sense if you are using software rendering because the cost to generate the visibility polygon probably outweighs the cost to draw the pixels needed to do shadow masking. However, if you are using any sort of hardware acceleration, even on the cheapest $5 single board computer the GPU centric solution using shadow masking is probably going to win both in terms of simplicity and performance.
 
 Relevant Links:
 * [Sight & Light](https://ncase.me/sight-and-light/)
