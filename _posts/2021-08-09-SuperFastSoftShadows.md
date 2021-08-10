@@ -162,7 +162,7 @@ penumbra -= 1.0/64.0; // Numerical precision fudge factor.
 
 # Subtracting Shadows is Wrong
 
-One of the primary ideas this is built in is that you can simply subtract one shadow from another to combine them. This actually only works for shadows that are adjacent though. If you have two separate objects that both cover the left half of a light at different distances, it's incorrect to subtract them and get 100% shadow since the right half of the light isn't covered. There isn't an easy solution to calculate which part of the light is covered and store it as far as I know. Fortunately, this is very subtle, and I doubt that many people will ever notice this.
+Subtracting shadows from the mask only works correctly for shadows that are adjacent. If you have two separate objects that both cover the left half of a light at different distances, it's incorrect to subtract them and get 100% shadow since the right half of the light isn't covered at all. The problem is there isn't an easy solution to calculate which part of the light is covered or store it as far as I know. Fortunately, this issue is very subtle, and I doubt that many people will ever notice it.
 
 # Clipping Reversed Shadows
 

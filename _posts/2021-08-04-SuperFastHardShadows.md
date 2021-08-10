@@ -262,4 +262,4 @@ Relevant Links:
 
 That is pretty much everything I know about implementing hard shadows for 2D games. Hopefully it gives you some ideas about how you want to implement them in your own game. In the next article I'll show how to take this idea and extend it to produce fairly accurate soft shadows. Happy illuminating. :)
 
-Thanks for reading, and stay tuned for the next post for implementing soft shadows.
+Thanks for reading, and make sure to check out the next post in the series on implementing [soft shadows](/SuperFastSoftShadows).
