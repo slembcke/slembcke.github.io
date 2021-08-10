@@ -47,7 +47,7 @@ const SHADOW_VSHADER = (`
   
   varying vec4 v_penumbras;
   varying vec3 v_edges;
-  varying vec3 v_light;
+  varying vec3 v_pro_pos;
   varying vec4 v_endpoints;
   
   // Keep in mind this is GLSL code. You'll need to swap row/column for HLSL.
@@ -92,7 +92,7 @@ const SHADOW_VSHADER = (`
 
     // Light penetration values.
     float light_penetration = 0.01;
-    v_light = vec3(proj_pos.xy, w*light_penetration);
+    v_pro_pos = vec3(proj_pos.xy, w*light_penetration);
     v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
   }
 `);
@@ -100,19 +100,20 @@ const SHADOW_VSHADER = (`
 const SHADOW_FSHADER = (`
   varying mediump vec4 v_penumbras;
   varying mediump vec3 v_edges;
-  varying mediump vec3 v_light;
+  varying mediump vec3 v_pro_pos;
   varying mediump vec4 v_endpoints;
   
   void main(){
     // Light penetration.
     mediump float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
     mediump vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
-    mediump vec2 penetration = closest_p - v_light.xy/v_light.z;
+    mediump vec2 penetration = closest_p - v_pro_pos.xy/v_pro_pos.z;
     mediump float bleed = min(dot(penetration, penetration), 1.0);
 
     // Penumbra mixing.
     mediump vec2 penumbras = smoothstep(-1.0, 1.0, v_penumbras.xz/v_penumbras.yw);
     mediump float penumbra = dot(penumbras, step(v_penumbras.yw, vec2(0.0)));
+    penumbra -= 1.0/64.0; // Numerical precision fudge factor.
     
     gl_FragColor = vec4(bleed*(1.0 - penumbra)*step(v_edges.z, 0.0));
   }
@@ -219,7 +220,6 @@ function main(){
   }
   
   requestAnimationFrame(render_loop);
-	// draw(ctx, 0);
 }
 
 function draw(ctx, time){

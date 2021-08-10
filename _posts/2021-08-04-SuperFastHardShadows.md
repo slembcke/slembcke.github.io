@@ -138,18 +138,6 @@ If you are making your own draw calls, then triangle strips can be a little easi
 
 Another option is to use instancing. Pass the segment endpoints as instance data, and use it to move the vertexes of a instanced quad around. Since you don't need an index buffer or degenerate geometry it makes for a mildly simpler implementation. On the other hand, instancing very tiny meshes like this is generally not optimal for a GPU, and for hard shadows it doesn't really reduce the data size much either. It's probably fine, but don't expect instancing to be faster here.
 
-# Limitations
-
-requires geometry
-lights overlapping geometry
-(TODO)
-
-# Alternatives
-
-visibility polygons
-image based
-(TODO)
-
 ## Optional Optimizations
 
 At this point you have a very simple, but effective system to draw 2D shadows! The performance isn't ideal in this simplest form however. The more lights and shadow geometry you add, the more optimization you might need.
@@ -235,6 +223,40 @@ Isometric games are also a case where you might _want_ to use a finite projectio
 ![isometric finite shadows](/images/lighting-2d/isometric-finite.png)
 
 ([source](https://gamedev.stackexchange.com/questions/11683/real-time-shadow-casting-in-a-2d-isometric-game))
+
+## Limitations
+
+This method for drawing hard shadows has some clear limitations. For starters, most 2D games aren't built with polygons, but that's exactly what is required for projecting shadows. Having a dual representation like this is kind of annoying, although modern physics engines basically require it too. Reusing outlines of your physics colliders can be very pragmatic.
+
+The next problem is how poorly it handles lights that overlap shadow casting geometry. If you aren't using backface culling, then shadows will suddenly pop in and out of existence as the light moves inside an object or wall. If you are culling backfaces, then the light will shine through the wall, and that might not be ideal either. The effect is especially bad with concave objects as only some parts of the object will cast shadows.
+
+Self shadowing can be an issue too. If you want an object to cast shadows on itself, you are  basically limited to using backface culling, and flipping the outline inside out so only the backfaces cast shadows. If you don't want an object to self shadow itself, then you have to deal with layering.
+
+Last but not least, normal maps are impossible to implement using a lightmap. All information about the directionality of light is missing, and all you get is how much light reaches a certain pixel. This is too bad since it can really add a lot of depth to a game's graphics.
+
+## Alternatives
+
+# Visibility Polygons
+
+Visibility polygons are an alternative to drawing shadow masks. Basically instead of masking off pixels that you don't want the light to affect, you make a polygon that only covers the pixels where a light _can_ reach. This sort of flips the problem inside out. This idea still makes sense if you are using software rendering. The cost to generate the visibility polygon probably outweighs the cost to draw the pixels needed to do shadow masking. If you are using any sort of hardware acceleration, even on the cheapest $5 single board computer, the GPU centric solution presented in this article is probably going to win in both simplicity and performance.
+
+Relevant Links:
+* [Sight & Light](https://ncase.me/sight-and-light/)
+* [2D Visibility - Red Blob Games](https://www.redblobgames.com/articles/visibility/)
+
+# Image Based Methods
+
+If you want to avoid the dual sprite + polygon representation, you can render shadow maps similar to 3D engines. For each light, render the alpha of the sprites around it into a buffer and then use an algorithm that smears the pixels away from the light in order to mask them. The main downside to this method is that it will require a lot of memory bandwidth and much more careful optimization to make it run comparably.
+
+Relevant Links:
+* [Catalin ZZ - Shader Based Dynamic 2D Shadows](http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/)
+
+# Deferred Rendering
+
+You can use the shadow masking algorithm presented here, but substitute deferred rendering for the lighting. Instead of rendering a lightmap, you render your scene into a gbuffer that has the color and normals. (You could technically skip the normals I guess) Then to render a light you start by drawing the shadow mask, and then read the colors/normals from the gbuffer to mix with the light and use a blend mode to multiply that by the mask. This avoids the dynamic range issues with a lightmap without requiring an HDR lightmap, and allows you to use normal mapped lighting for more detail. The downsides are the increased complexity, slightly higher performance requirements, and inability to use alpha blending.
+
+Relevant Links:
+* [Ulta Fast Dynamic Lights in GMS2](https://www.youtube.com/watch?v=eyDUco5zzLU)
 
 ## Closing Thoughts
 
