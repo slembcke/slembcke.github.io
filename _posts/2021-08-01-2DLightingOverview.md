@@ -14,6 +14,7 @@ https://medium.com/@NoelFB/remaking-celestes-lighting-3478d6f10bf
 https://www.redblobgames.com/articles/visibility/
 https://ncase.me/sight-and-light/
 http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/
+https://samuelbigos.github.io/posts/2dgi1-2d-global-illumination-in-godot.html
 -->
 
 In the early 2000's I played a lovely indie game called [Gish](http://www.chroniclogic.com/gish.htm). One of the many great things about the game was its 2D light and shadow effects. They were glorious, and I had never seen anything quite like them in a 2D game before.
