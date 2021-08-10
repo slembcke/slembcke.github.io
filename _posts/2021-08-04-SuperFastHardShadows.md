@@ -253,7 +253,7 @@ Relevant Links:
 
 # Deferred Rendering
 
-You can use the shadow masking algorithm presented here, but substitute deferred rendering for the lighting. Instead of rendering a lightmap, you render your scene into a gbuffer that has the color and normals. (You could technically skip the normals I guess) Then to render a light you start by drawing the shadow mask, and then read the colors/normals from the gbuffer to mix with the light and use a blend mode to multiply that by the mask. This avoids the dynamic range issues with a lightmap without requiring an HDR lightmap, and allows you to use normal mapped lighting for more detail. The downsides are the increased complexity, slightly higher performance requirements, and inability to use alpha blending.
+You can use the shadow masking algorithm presented here, but substitute deferred rendering for the lighting. Instead of rendering a lightmap, you render your scene into a gbuffer that has the color and normals. (You could technically skip the normals I guess) Then to render a light you start by drawing the shadow mask, and then read the colors/normals from the gbuffer to mix with the light and use a blend mode to multiply that by the mask. This avoids the dynamic range issues with a lightmap without requiring an HDR lightmap, and allows you to use normal mapped lighting for more detail. The downsides are the increased complexity, slightly higher performance requirements, and inability to use transparency.
 
 Relevant Links:
 * [Ulta Fast Dynamic Lights in GMS2](https://www.youtube.com/watch?v=eyDUco5zzLU)

@@ -2,7 +2,7 @@
 layout: post
 title: "2D Lighting with Soft Shadows"
 description: "Extending the hard shadow technique with accurate penumbras."
-date: 2021-08-04 12:00:00 -0500
+date: 2021-08-09
 #categories: jekyll update
 permalink: SuperFastSoftShadows
 ---
