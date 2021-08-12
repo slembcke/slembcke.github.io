@@ -47,12 +47,11 @@ const SHADOW_VSHADER = (`
   
   varying vec4 v_penumbras;
   varying vec3 v_edges;
-  varying vec3 v_pro_pos;
+  varying vec3 v_proj_pos;
   varying vec4 v_endpoints;
   
   // Keep in mind this is GLSL code. You'll need to swap row/column for HLSL.
   mat2 adjugate(mat2 m){return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);}
-  mat2 inverse(mat2 m){return adjugate(m)/(m[0][0]*m[1][1] - m[0][1]*m[1][0]);}
   
   void main(){
     // Unpack the vertex shader input.
@@ -84,15 +83,16 @@ const SHADOW_VSHADER = (`
     // Edge values for light penetration and clipping.
     vec2 seg_delta = endpoint_b - endpoint_a;
     vec2 seg_normal = seg_delta.yx*vec2(-1.0, 1.0);
-    v_edges.xy = inverse(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
-    v_edges.y *= 2.0;
+    // Calculate where the light -> pixel ray will intersect with the segment.
+    v_edges.xy = -adjugate(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
+    v_edges.y *= 2.0; // Skip a multiply in the fragment shader.
     // Calculate a clipping coordinate that is 0 at the near edge (when w = 1)...
     // otherwise calculate the dot product with the projected coordinate.
     v_edges.z = dot(seg_normal, delta - offset)*(1.0 - w);
 
     // Light penetration values.
     float light_penetration = 0.01;
-    v_pro_pos = vec3(proj_pos.xy, w*light_penetration);
+    v_proj_pos = vec3(proj_pos.xy, w*light_penetration);
     v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
   }
 `);
@@ -100,15 +100,17 @@ const SHADOW_VSHADER = (`
 const SHADOW_FSHADER = (`
   varying mediump vec4 v_penumbras;
   varying mediump vec3 v_edges;
-  varying mediump vec3 v_pro_pos;
+  varying mediump vec3 v_proj_pos;
   varying mediump vec4 v_endpoints;
   
   void main(){
-    // Light penetration.
-    mediump float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
-    mediump vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
-    mediump vec2 penetration = closest_p - v_pro_pos.xy/v_pro_pos.z;
-    mediump float bleed = min(dot(penetration, penetration), 1.0);
+    // Calculate the light intersection point, but clamp to endpoints to avoid artifacts.
+    mediump float intersection_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5);
+    mediump vec2 intersection_point = (0.5 - intersection_t)*v_endpoints.xy + (0.5 + intersection_t)*v_endpoints.zw;
+    // The delta from the intersection to the pixel.
+    mediump vec2 penetration_delta = intersection_point - v_proj_pos.xy/v_proj_pos.z;
+    // Apply a simple falloff function.
+    mediump float bleed = min(dot(penetration_delta, penetration_delta), 1.0);
 
     // Penumbra mixing.
     mediump vec2 penumbras = smoothstep(-1.0, 1.0, v_penumbras.xz/v_penumbras.yw);

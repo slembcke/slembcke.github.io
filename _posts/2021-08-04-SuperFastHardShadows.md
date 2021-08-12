@@ -226,7 +226,7 @@ Isometric games are also a case where you might _want_ to use a finite projectio
 
 ## Limitations
 
-This method for drawing hard shadows has some clear limitations. For starters, most 2D games aren't built with polygons, but that's exactly what is required for projecting shadows. Having a dual representation like this is kind of annoying, although modern physics engines basically require it too. Reusing outlines of your physics colliders can be very pragmatic.
+This method for drawing hard shadows has some clear limitations. For starters, most 2D games aren't built with polygons, but that's what is required for projecting shadows. Having a dual representation like this is kind of annoying, although modern physics engines basically require it too. Reusing outlines of your physics colliders can be very pragmatic.
 
 The next problem is how poorly it handles lights that overlap shadow casting geometry. If you aren't using backface culling, then shadows will suddenly pop in and out of existence as the light moves inside an object or wall. If you are culling backfaces, then the light will shine through the wall, and that might not be ideal either. The effect is especially bad with concave objects as only some parts of the object will cast shadows.
 

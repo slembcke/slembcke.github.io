@@ -204,45 +204,47 @@ This isn't the case with floating point HDR lightmaps though. Since their dynami
 
 For a long time, the best solution I had was to run an alpha clamping pass using a "max" blend mode in conjunction with a solid black pass. This would clamp the negative pixels in the shadow mask back to zero. This worked fine, but requiring an extra draw call and rendering pass is not ideal. One solution to avoid this is using programable blending, but that's only supported on a few mobile GPUs.
 
-I eventually came up with a better, but fairly bizarre solution. It really needs it's own article to explain it properly... Basically it involves rendering the lights without shadows first into their own buffer. I do this at 1/8th the screen resolution in a single batch so it's practically free. Then you draw a second map that just contains how much light should have been blocked by shadows using the "alpha saturate" source color blend factor to clamp the negative mask values. Finally, when this second map is subtracted from the lightmap, you get correctly shadowed results!
+I eventually came up with a better, but fairly bizarre solution. I'll cover this in my next article about 2D lightfields since those require floating point buffers. Basically it involves rendering the lights without shadows first into their own buffer. I do this at 1/8th the screen resolution in a single batch so it's practically free. Then you draw a second map that just contains how much light should have been blocked by shadows using the "alpha saturate" source color blend factor to clamp the negative mask values. Finally, when this second map is subtracted from the lightmap, you get correctly shadowed results!
 
 ## Light Penetration
 
-A final optional effect I would highly recommend is to allow the light to penetrate slightly into surfaces. This has a few benefits. The first is that it allows you to light up the edges of objects, letting the player see a bit of detail on them. The second is that the near edge of the shadow is still and aliased, and this is a cheap way to soften it. Beyond just the aesthetics, this makes it viable to reduce the resolution of your lightmap without sacrificing any noticeable details _and_ vastly decreasing the performance cost. This can make soft shadows not only look better, but run faster at the same time! :D It's a win/win scenario.
+A final optional effect I would highly recommend is to allow the light to penetrate slightly into surfaces. This has a few benefits. The first is that it allows you to light up the edges of objects, letting the player see a bit of detail on them. The second is that the near edge of the shadow is still and aliased, and this is a cheap way to soften it. Beyond just the aesthetics, this makes it viable to reduce the resolution of your lightmap without sacrificing any noticeable details _and_ vastly decreasing the performance cost. It does have some minor derivative discontinuity artifacts at corners, but they mostly disappear with subsampling. Overall, it can make soft shadows not only look better, but run faster at the same time! :D It's a win/win scenario.
 
 ![light penetration](/images/lighting-2d/shadow-soft.png)
 
-Unfortunately... I don't exactly remember how some of this code works without re-deriving it. :( It has sort of been optimized into oblivion to push as much of the work into the vertex shader as possible. I might come back later to rewrite this section, but for now I'm just going to present it as is.
+The idea is to figure out how far the light went to get to the current pixel after intersecting the segment. This calculation is yet another linear system that we can just calculate as a matrix inverse. Like the penumbras, we only care about a ratio in the fragment shader, so we can substitute the adjugate matrix again to save a few cycles. Given the intersection position and the pixel position in the fragment shader, all you need to do is find the distance and apply a falloff function.
 
 ```
-varying vec3 v_pro_pos;
+varying vec3 v_proj_pos;
 varying vec4 v_endpoints;
 
 ...
 
+// In the vertex shader:
 // Finally fill in the remaining "edge" values.
-// These are used to calculate the closest point on the segment to the pixel.
-// I don't remember why this part works.
-v_edges.xy = inverse(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
-v_edges.y *= 2.0;
+// Calculate where the light -> pixel ray will intersect with the segment.
+v_edges.xy = -adjugate(mat2(seg_delta, delta_a + delta_b))*(delta - offset*(1.0 - w));
+v_edges.y *= 2.0; // Skip a multiply in the fragment shader.
 
 float light_penetration = 0.01;
 // Scale the vertex position by the light penetration amount.
 // This saves a bit of effort in the fragment shader.
 v_proj_pos = vec3(proj_pos.xy, w*light_penetration);
-// Lastly, pass the segment endpoints along to the fragment shader.
+// Lastly, pass the pixel position and segment endpoints along to the fragment shader.
+// Scaled by the light penetration amount to avoid doing it for every pixel.
+v_proj_pos = vec3(proj_pos.xy, w*light_penetration);
 v_endpoints = vec4(endpoint_a, endpoint_b)/light_penetration;
 
 ...
 
-// Now in the fragment shader, calculate the closest point.
-mediump float closest_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5) + 0.5;
-mediump vec2 closest_p = mix(v_endpoints.xy, v_endpoints.zw, closest_t);
-// Compare this to fragment position to measure how far the light penetrated.
-mediump vec2 penetration = closest_p - v_proj_pos.xy/v_proj_pos.z;
-// Attenuate the light based on this distance.
-// Squared distance is a good and easy choice. :)
-mediump float bleed = min(dot(penetration, penetration), 1.0);
+// Now in the fragment shader:
+// Calculate the light intersection point, but clamp to endpoints to avoid artifacts.
+mediump float intersection_t = clamp(v_edges.x/abs(v_edges.y), -0.5, 0.5);
+mediump vec2 intersection_point = (0.5 - intersection_t)*v_endpoints.xy + (0.5 + intersection_t)*v_endpoints.zw;
+// The delta from the intersection to the pixel.
+mediump vec2 penetration_delta = intersection_point - v_proj_pos.xy/v_proj_pos.z;
+// Apply a simple falloff function.
+mediump float bleed = min(dot(penetration_delta, penetration_delta), 1.0);
 
 // Finally, multiply the light bleeding factor into the shadow mask.
 gl_FragColor = vec4(bleed*(1.0 - penumbra)*step(v_edges.z, 0.0));
@@ -252,8 +254,21 @@ gl_FragColor = vec4(bleed*(1.0 - penumbra)*step(v_edges.z, 0.0));
 
 This soft shadowing algorithm inherits pretty much all of the limitations of the hard shadows described in the previous article, though it doesn't really add any new ones. The only caveat is that since lights now have area, the overlap problem is exacerbated. This is manageable with the tangent approximation used earlier.
 
+## Alternatives
+
+# Blurred Hard Shadows
+
+Generating a lighmap with hard shadows and blurring it can also be an easy and pragmatic solution if your project already has some sort of blur functionality available. It won't be physically accurate, but does that really matter? In the past this wasn't the best option for mobile since blurs can consume a lot of memory bandwidth and their GPUs were fairly weak. Times have changed thankfully. :)
+
+# Raymarching
+
+Raymarching can be a very simple method to generate approximate soft shadows. It's a variation on raytracing that is very easy to implement, but also very resource intensive. It may not be the best choice if you are targeting mobile, or low end machines. It also relies on maintaining a distance field representation of your game's geometry, which isn't so easy. I've seen some very interesting and impressive demos using this technique, and it's worth reading up on I think.
+
+Relevant Links:
+* [2DGI #1 - Global Illumination in Godot](https://samuelbigos.github.io/posts/2dgi1-2d-global-illumination-in-godot.html)
+
 ## Closing Thoughts
 
-Hopefully people find this useful for their own projects as it took a _long_ time to figure out the math and work out all the bugs. This might not be a perfect technique for rendering soft shadows, but it will always find a place in my games. :)
+Hopefully people find this useful for their own projects as it took a _long_ time to figure out the math and work out all the bugs. This might not be a perfect technique for rendering soft shadows, but it will always find a place in my games. :) It's the best way I currently know of to make extremely fast, GPU accelerated 2D soft shadows while retaining reasonably accurate penumbras.
 
 In the next article, I'll document my method for compactly storing 2D lightfields to use with normal mapping as a replacement for lightmaps.
