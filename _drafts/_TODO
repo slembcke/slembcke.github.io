@@ -8,9 +8,6 @@
 	* Savestates
 	* ECS
 * 2D Lighting
-	* Basics (screen space map, blending)
-	* Hard shadow masks
-	* Soft shadow masks
 	* Soft shadow blend and clear
 	* Fourier light field
 	* Sampling the light field
@@ -18,3 +15,17 @@
 	* Beginning Vulkan (C99, Linux, Layers)
 	* NES Dev tutorials
 	* GDB
+
+Matrix math crash course
+Fast 2D rendering
+Fast culling for 2D sprites
+Spatial indexing
+AABB trees
+Timer heaps
+
+Shader tricks
+Noise blur
+Shader toys
+Anti-aliased, nearest neighbor filtering
+Projective texturing
+Temporal dithering
