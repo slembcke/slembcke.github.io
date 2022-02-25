@@ -11,9 +11,7 @@ Project Drift is the working name for my asteroid mining adventure game. While t
 * Real time lighting using 2D light fields.
 * Dynamic ecosystem where resources exist in a cycle.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Gi6xu6n2oHo" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-This is from a prototype a made a few years ago. Unfortunately I didn't make a lot of videos of it.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/dWcCm9nX_zQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 # Related Blog Posts:
 
