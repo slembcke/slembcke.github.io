@@ -11,6 +11,12 @@ permalink: SuperFastHardShadows
 <script src="/js/lighting-2d/hard-shadows.js" defer></script>
 [WebGL example source code](/js/lighting-2d/hard-shadows.js)
 
+# Lighting in 2D Games Series
+
+* [Part 1: 2D Lighting Techniques](2D-Lighting-Overview)
+* [Part 2: 2D Lighting with Hard Shadows](SuperFastHardShadows)
+* [Part 3: 2D Lighting with Soft Shadows](SuperFastSoftShadows)
+
 ### Easy 2D Lighting with Hard Shadows
 
 Adding dynamic lighting to your 2D game is a relatively easy way to add a lot of depth and atmosphere. In my [overview article](/2D-Lighting-Overview) I compared a number of lighting techniques for 2D games. By the end of this article, you'll have everything you need to implement fast and simple lighting with hard shadows in your game. In the next article, we'll be extending this technique to produce fairly accurate [soft shadows](/SuperFastSoftShadows) while retaining nearly all of the benefits of this simpler hard shadow algorithm.

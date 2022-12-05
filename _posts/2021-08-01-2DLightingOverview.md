@@ -17,6 +17,14 @@ http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-
 https://samuelbigos.github.io/posts/2dgi1-2d-global-illumination-in-godot.html
 -->
 
+# Lighting in 2D Games Series
+
+* [Part 1: 2D Lighting Techniques](2D-Lighting-Overview)
+* [Part 2: 2D Lighting with Hard Shadows](SuperFastHardShadows)
+* [Part 3: 2D Lighting with Soft Shadows](SuperFastSoftShadows)
+
+# Motivation
+
 In the early 2000's I played a lovely indie game called [Gish](http://www.chroniclogic.com/gish.htm). One of the many great things about the game was its 2D light and shadow effects. They were glorious, and I had never seen anything quite like them in a 2D game before.
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/sFlzTyjR4M8?start=12" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

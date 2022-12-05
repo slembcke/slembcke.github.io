@@ -13,6 +13,12 @@ permalink: SuperFastSoftShadows
 
 This article is an extension of the article about [hard shadows](/SuperFastHardShadows). If you haven't read that one yet, you definitely will want to do that first! The math in this article gets considerably more involved, and you'll want to have a good foundation.
 
+# Lighting in 2D Games Series
+
+* [Part 1: 2D Lighting Techniques](2D-Lighting-Overview)
+* [Part 2: 2D Lighting with Hard Shadows](SuperFastHardShadows)
+* [Part 3: 2D Lighting with Soft Shadows](SuperFastSoftShadows)
+
 ## Super Fast Soft Shadows
 
 Soft shadows just make everything look better! I think this is true even in pixel art games where the aliased, crunchy look of hard shadows _should_ fit in better. Because of the potential, I spent years, pondering about a better way to draw them. Basically I wasn't willing to give up my nice hardware accelerated solution that had such a minimal CPU impact for a little blur. I was aware of a few variations of "[shadow fins](http://archive.gamedev.net/archive/reference/articles/article2032.html)", but they all seemed to involve a lot of CPU work, and some of them had some nasty motion artifacts where the penumbras would suddenly jump as an object or light moved.
