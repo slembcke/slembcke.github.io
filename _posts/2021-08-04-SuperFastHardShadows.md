@@ -7,8 +7,6 @@ date: 2021-08-04
 permalink: SuperFastHardShadows
 ---
 
-<script src="/js/q5.min.js"></script>
-
 <canvas id="glcanvas" width="640" height="480"></canvas>
 <script src="/js/lighting-2d/hard-shadows.js" defer></script>
 [WebGL example source code](/js/lighting-2d/hard-shadows.js)
@@ -76,81 +74,92 @@ In order to draw the shadow mask, you have to take those line segments that surr
 
 <!-- ![shadow projection](/images/lighting-2d/shadow-projection.svg) -->
 <div id="shadow_projection"></div>
+<canvas id="shadow-projection"></canvas>
 
 <script>
 (function(){
-	const p = new Q5()
-	p.createCanvas(600, 400)
-	document.getElementById("shadow_projection").appendChild(p.canvas)
-
+	let ctx
+	function line(x0, y0, x1, y1){ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()}
+	function circle(x, y, r){ctx.beginPath(); ctx.ellipse(x, y, r, r, 0, 0, 2*Math.PI)}
+	
 	function draw(m, focused){
-		p.resetMatrix()
-		if(focused) p.clear(); else p.background(240)
+		ctx.setTransform(1, 0, 0, 1, 0, 0)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		ctx.fillStyle = "#EEE"
+		if(focused) ctx.clearRect(0, 0, w, h); else ctx.fillRect(0, 0, w, h)
 
-		p.fill(255, 255, 0)
-		p.strokeWeight(0.5)
-		p.stroke(255, 0, 0)
-		p.circle(m.x, m.y, 15)
-
+		ctx.fillStyle = "#FF0"
+		ctx.strokeStyle = "#F00"
+		ctx.lineWidth = 0.5
+		circle(m.x, m.y, 10)
+		ctx.fill(); ctx.stroke()
+		
+		const coef = 3
 		const l0 = {x:170, y:175}, l1 = {x:150, y:225}
-		p.stroke(0, 0, 0)
-		p.strokeWeight(2)
-		p.line(l0.x, l0.y, l1.x, l1.y)
-
-		const coef = 5
 		const s0 = {x:l0.x + coef*(l0.x - m.x), y:l0.y + coef*(l0.y - m.y)}
 		const s1 = {x:l1.x + coef*(l1.x - m.x), y:l1.y + coef*(l1.y - m.y)}
-
-		p.noFill()
-		p.strokeWeight(0.25)
-		p.triangle(m.x, m.y, s0.x, s0.y, s1.x, s1.y)
-
-		p.fill(180)
-		p.strokeWeight(0.75)
-		p.triangle(s0.x, s0.y, l0.x, l0.y, l1.x, l1.y)
-		p.triangle(s0.x, s0.y, s1.x, s1.y, l1.x, l1.y)
 		
-		p.stroke(255, 0, 0)
-		p.strokeWeight(5)
-		p.point(l0.x, l0.y)
-		p.point(l1.x, l1.y)
-		p.point(s0.x, s0.y)
-		p.point(s1.x, s1.y)
+		ctx.strokeStyle = "#000"
+		ctx.lineWidth = 0.25
+		line(m.x, m.y, l0.x, l0.y)
+		line(m.x, m.y, l1.x, l1.y)
+		
+		ctx.fillStyle = "#BBB"
+		ctx.lineWidth = 0.75
+		ctx.beginPath()
+		ctx.moveTo(l0.x, l0.y)
+		ctx.lineTo(l1.x, l1.y)
+		ctx.lineTo(s1.x, s1.y)
+		ctx.lineTo(s0.x, s0.y)
+		ctx.closePath()
+		ctx.fill()
+		ctx.lineTo(s1.x, s1.y)
+		ctx.stroke()
+		
+		ctx.lineWidth = 5
+		line(l0.x, l0.y, l1.x, l1.y)
+
+		ctx.fillStyle = "#F00"
+		circle(l0.x, l0.y, 5); ctx.fill()
+		circle(l1.x, l1.y, 5); ctx.fill()
+		circle(s0.x, s0.y, 5); ctx.fill()
+		circle(s1.x, s1.y, 5); ctx.fill()
 		
 		function axis_mat(m, s){
 			const dx = s.x - m.x, dy = s.y - m.y
-			const len = Math.sqrt(dx*dx + dy*dy)
+			const len = Math.sqrt(dx*dx + dy*dy)/1.5
 			const xa = dx > 0 ? {x:+dx/len, y:+dy/len} : {x:-dx/len, y:-dy/len}
 			const ya = dx > 0 ? {x:-dy/len, y:+dx/len} : {x:+dy/len, y:-dx/len}
 			
-			p.resetMatrix()
-			p.applyMatrix(xa.x, xa.y, ya.x, ya.y, m.x, m.y)
+			ctx.setTransform(xa.x, xa.y, ya.x, ya.y, m.x, m.y)
 			return dx > 0 ? len : -len
 		}
 		
-		p.fill(0)
-		p.noStroke()
-		p.textAlign("center", "bottom")
+		ctx.fillStyle = "#000"
+		ctx.textAlign = "center"
 		const len_a = axis_mat(m, l0)
-		p.text("a", 0.5*len_a, -3)
-		p.text("5*a", 2*len_a, -3)
-		
+		ctx.fillText("a", 0.5*len_a, -3)
+		ctx.fillText("3*a", 2*len_a, -3)
 		const len_b = axis_mat(m, l1)
-		p.text("b", 0.5*len_b, -3)
-		p.text("5*b", 2*len_b, -3)
+		ctx.fillText("b", 0.5*len_b, -3)
+		ctx.fillText("3*b", 2*len_b, -3)
 		
 		if(!focused){
-			p.textAlign("center", "center")
-			p.resetMatrix()
-			p.applyMatrix(3, 0, 0, 3, 300, 50)
-			p.text("Use Mouse to Interact", 0, 0)
+			ctx.setTransform(3, 0, 0, 3, 300, 50)
+			ctx.fillText("Use Mouse to Interact", 0, 0)
 		}
 	}
+	
+	const canvas = document.getElementById("shadow-projection")
+	const w = canvas.width = 600
+	const h = canvas.height = 400
+	ctx = canvas.getContext("2d")
 
-	const pos = {x:70, y:150}
-	draw(pos, false)
-	p.canvas.onmouseleave = (e) => draw(pos, false)
-	p.canvas.onmousemove = (e) => draw({x:e.offsetX, y:e.offsetY}, true)
+	const pos0 = {x:70, y:150}
+	draw(pos0, false)
+	canvas.onmouseleave = (e) => draw(pos0, false)
+	canvas.onmousemove = (e) => draw({x:e.offsetX, y:e.offsetY}, true)
 })()
 </script>
 
