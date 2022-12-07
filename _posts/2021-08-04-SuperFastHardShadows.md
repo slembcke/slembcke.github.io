@@ -7,6 +7,8 @@ date: 2021-08-04
 permalink: SuperFastHardShadows
 ---
 
+<script src="/js/q5.min.js"></script>
+
 <canvas id="glcanvas" width="640" height="480"></canvas>
 <script src="/js/lighting-2d/hard-shadows.js" defer></script>
 [WebGL example source code](/js/lighting-2d/hard-shadows.js)
@@ -72,7 +74,85 @@ Generally speaking, there isn't a "clear the alpha" function in graphics APIs. Y
 
 In order to draw the shadow mask, you have to take those line segments that surround all of your shadow casting surfaces, and project them away from the light's origin. This turns each segment into a quad that covers the area occupied by the shadow. Two of the vertexes of this quad are just the endpoints of the line segment. To figure out where the other two go, imagine lines going from the light's origin to each endpoint. The other vertexes need to be put somewhere on those lines. It doesn't really matter where as long as they are far enough away that the opposite edge of the shadow quad isn't visible onscreen.
 
-![shadow projection](/images/lighting-2d/shadow-projection.svg)
+<!-- ![shadow projection](/images/lighting-2d/shadow-projection.svg) -->
+<div id="shadow_projection"></div>
+
+<script>
+(function(){
+	const p = new Q5()
+	p.createCanvas(600, 400)
+	document.getElementById("shadow_projection").appendChild(p.canvas)
+
+	function draw(m, focused){
+		p.resetMatrix()
+		if(focused) p.clear(); else p.background(240)
+
+		p.fill(255, 255, 0)
+		p.strokeWeight(0.5)
+		p.stroke(255, 0, 0)
+		p.circle(m.x, m.y, 15)
+
+		const l0 = {x:170, y:175}, l1 = {x:150, y:225}
+		p.stroke(0, 0, 0)
+		p.strokeWeight(2)
+		p.line(l0.x, l0.y, l1.x, l1.y)
+
+		const coef = 5
+		const s0 = {x:l0.x + coef*(l0.x - m.x), y:l0.y + coef*(l0.y - m.y)}
+		const s1 = {x:l1.x + coef*(l1.x - m.x), y:l1.y + coef*(l1.y - m.y)}
+
+		p.noFill()
+		p.strokeWeight(0.25)
+		p.triangle(m.x, m.y, s0.x, s0.y, s1.x, s1.y)
+
+		p.fill(180)
+		p.strokeWeight(0.75)
+		p.triangle(s0.x, s0.y, l0.x, l0.y, l1.x, l1.y)
+		p.triangle(s0.x, s0.y, s1.x, s1.y, l1.x, l1.y)
+		
+		p.stroke(255, 0, 0)
+		p.strokeWeight(5)
+		p.point(l0.x, l0.y)
+		p.point(l1.x, l1.y)
+		p.point(s0.x, s0.y)
+		p.point(s1.x, s1.y)
+		
+		function axis_mat(m, s){
+			const dx = s.x - m.x, dy = s.y - m.y
+			const len = Math.sqrt(dx*dx + dy*dy)
+			const xa = dx > 0 ? {x:+dx/len, y:+dy/len} : {x:-dx/len, y:-dy/len}
+			const ya = dx > 0 ? {x:-dy/len, y:+dx/len} : {x:+dy/len, y:-dx/len}
+			
+			p.resetMatrix()
+			p.applyMatrix(xa.x, xa.y, ya.x, ya.y, m.x, m.y)
+			return dx > 0 ? len : -len
+		}
+		
+		p.fill(0)
+		p.noStroke()
+		p.textAlign("center", "bottom")
+		const len_a = axis_mat(m, l0)
+		p.text("a", 0.5*len_a, -3)
+		p.text("5*a", 2*len_a, -3)
+		
+		const len_b = axis_mat(m, l1)
+		p.text("b", 0.5*len_b, -3)
+		p.text("5*b", 2*len_b, -3)
+		
+		if(!focused){
+			p.textAlign("center", "center")
+			p.resetMatrix()
+			p.applyMatrix(3, 0, 0, 3, 300, 50)
+			p.text("Use Mouse to Interact", 0, 0)
+		}
+	}
+
+	const pos = {x:70, y:150}
+	draw(pos, false)
+	p.canvas.onmouseleave = (e) => draw(pos, false)
+	p.canvas.onmousemove = (e) => draw({x:e.offsetX, y:e.offsetY}, true)
+})()
+</script>
 
 That looks something like the following in code:
 ```
