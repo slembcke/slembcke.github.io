@@ -10,14 +10,6 @@ permalink: Water
 <canvas id="shadow-projection"></canvas>
 
 <script>
-function _lifft_setup(x){
-	let n = x.re.length
-	let bits = Math.floor(Math.log2(n));
-	// Check size.
-	console.assert(n == 1 << bits && bits <= 32, n);
-	return bits;
-}
-
 _LIFFT_REV6 = [
 	0x00, 0x20, 0x10, 0x30, 0x08, 0x28, 0x18, 0x38, 0x04, 0x24, 0x14, 0x34, 0x0C, 0x2C, 0x1C, 0x3C,
 	0x02, 0x22, 0x12, 0x32, 0x0A, 0x2A, 0x1A, 0x3A, 0x06, 0x26, 0x16, 0x36, 0x0E, 0x2E, 0x1E, 0x3E,
@@ -35,72 +27,95 @@ function _lifft_rev_bits24(n, bits){
 	return rev >> (24 - bits);
 }
 
+const lifft_complex = (re, im) => ({re, im});
+const lifft_cadd = (x, y) => lifft_complex(x.re + y.re, x.im + y.im);
+const lifft_csub = (x, y) => lifft_complex(x.re - y.re, x.im - y.im);
+const lifft_cmul = (x, y) => lifft_complex(x.re*y.re - x.im*y.im, x.re*y.im + x.im*y.re);
+const lifft_cispi = (x) => lifft_complex(Math.cos(Math.PI*x), Math.sin(Math.PI*x));
+
 function _lifft_process(x){
-	let x_re = x.re, x_im = x.im;
-	let n = x_re.length
+	const x_re = x.re, x_im = x.im, n = x_re.length
 	for(stride = 1; stride < n; stride *= 2){
-		let phase = -Math.PI/stride;
-		let wm_re = Math.cos(phase), wm_im = Math.sin(phase);
-		// console.log("wm" + stride + ": " + wm_re + "+" + wm_im + " " + phase)
+		const wm = lifft_cispi(-1/stride);
 		for(i = 0; i < n; i += 2*stride){
-			let w_re = 1, w_im = 0;
+			let w = lifft_complex(1, 0);
 			for(j = 0; j < stride; j++){
-				let idx0 = i + j, idx1 = idx0 + stride;
-				let p_re = x_re[idx0], p_im = x_im[idx0];
-				let q_re = w_re*x_re[idx1] - w_im*x_im[idx1];
-				let q_im = w_re*x_im[idx1] + w_im*x_re[idx1];
-				x_re[idx0] = p_re + q_re, x_im[idx0] = p_im + q_im;
-				x_re[idx1] = p_re + q_re, x_im[idx1] = p_im + q_im;
-				w_re = w_re*wm_re - w_im*wm_im, w_im = w_re*wm_im + w_im*wm_re;
+				const idx0 = i + j, idx1 = idx0 + stride;
+				const p = lifft_complex(x_re[idx0], x_im[idx0]);
+				const q = lifft_cmul(w, lifft_complex(x_re[idx1], x_im[idx1]));
+				x_re[idx0] = p.re + q.re, x_re[idx1] = p.re - q.re;
+				x_im[idx0] = p.im + q.im, x_im[idx1] = p.im - q.im;
+				w = lifft_cmul(w, wm);
 			}
 		}
 	}
 }
 
-function lifft_forward_complex(x_in, x_out){
-	bits = _lifft_setup(x_in), n = x_in.re.length;
-	tmp = {re:[], im:[]};
-	
+function lifft_forward_complex(x_in){
+	const n = x_in.re.length, bits = Math.floor(Math.log2(n))
+	const x_out = lifft_complex([], [])
 	for(i = 0; i < n; i++){
 		i_rev = _lifft_rev_bits24(i, bits);
-		tmp.re[i_rev] = x_in.re[i];
-		tmp.im[i_rev] = x_in.im[i];
+		x_out.re[i_rev] = x_in.re[i];
+		x_out.im[i_rev] = x_in.im[i];
 	}
-	_lifft_process(tmp, n);
-	for(i = 0; i < n; i++){
-		x_out.re[i] = tmp.re[i];
-		x_out.im[i] = tmp.im[i];
-		// console.log(i + ": " + x_out.re[i] + "+" + x_out.im[i])
-	}
+	_lifft_process(x_out, n);
+	return x_out;
+}
+
+function lifft_complex_arr(n, type = Float32Array){
+	const s = type.BYTES_PER_ELEMENT, buff = new ArrayBuffer(2*s*n);
+	return lifft_complex(new type(buff, 0*n, n), new type(buff, s*n, n));
 }
 
 (function(){
 	const canvas = document.getElementById("shadow-projection")
-	const w = canvas.width = 600
-	const h = canvas.height = 400
-	ctx = canvas.getContext("2d")
+	canvas.width = 600
+	canvas.height = 400
+	const ctx = canvas.getContext("2d")
 	
-	let = x = {
-		re:[0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-		im:[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-	}, X = {re:[], im:[]}
-	lifft_forward_complex(x, X)
+	const N = 128
 	
-	function draw(mouse, focused){
+	const spectra = lifft_complex_arr(N)
+	for(i = 0; i < N; i++){
+		const gamma = 0.8, y = i/gamma
+		const phase = lifft_cispi(2*Math.random())
+		const mag = Math.pow(y, 3)*Math.exp(-y)
+		const z = lifft_cmul(phase, lifft_complex(mag, 0))
+		spectra.re[i] = z.re
+		spectra.im[i] = z.im
+	}
+	
+	function draw(t){
 		ctx.setTransform(1, 0, 0, 1, 0, 0)
 		ctx.lineCap = ctx.lineJoin = "round"
 		
 		ctx.fillStyle = "#EEE"
-		if(focused) ctx.clearRect(0, 0, w, h); else ctx.fillRect(0, 0, w, h)
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
 
 		ctx.strokeStyle = "#000"
 		ctx.lineWidth = 1.0
 		ctx.beginPath()
 		
-		let x0 = 100, y0 = 100, xs = 10, ys = -10
-		ctx.moveTo(x0, y0 + ys*X.re[0])
-		for(i = 1; i < x.re.length; i++){
-			ctx.lineTo(x0 + xs*i, y0 + ys*X.re[i])
+		let w = lifft_cispi(t*1e-3), foo = lifft_complex_arr(N) //lifft_complex([], [])
+		for(i = 0; i < N; i++){
+			let bar = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]));
+			foo.re[i] = bar.re, foo.im[i] = bar.im;
+		}
+		let waves = lifft_forward_complex(foo)
+		
+		let x0 = 0, y0 = canvas.height/2, xs = canvas.width/(N - 1), ys = -20
+		
+		ctx.moveTo(x0, y0 + ys*waves.re[0])
+		for(i = 1; i < waves.re.length; i++){
+			ctx.lineTo(x0 + xs*i, y0 + ys*waves.re[i])
+		}
+		ctx.stroke()
+		
+		ctx.strokeStyle = "#888"
+		ctx.moveTo(x0, y0 + ys*waves.im[0])
+		for(i = 1; i < waves.re.length; i++){
+			(ctx.lineTo)(x0 + xs*i, y0 + ys*waves.im[i])
 		}
 		ctx.stroke()
 		
@@ -112,7 +127,12 @@ function lifft_forward_complex(x_in, x_out){
 		// }
 	}
 	
-	draw({x:0, y:0})
-	canvas.onmousemove = (e) => draw({x:e.offsetX, y:e.offsetY})
+	function animate(t){
+		draw(t)
+		window.requestAnimationFrame(animate)
+	}
+	animate(0)
+	// draw({x:0, y:0})
+	// canvas.onmousemove = (e) => draw({x:e.offsetX, y:e.offsetY})
 })()
 </script>
