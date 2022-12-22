@@ -2,7 +2,7 @@
 layout: post
 title: "Normal Maps in 2D using Lightfields"
 description: ""
-date: 2020-01-01 12:00:00 -0500
+date: 2022-12-20 12:00:00 -0500
 #categories: jekyll update
 permalink: 
 ---

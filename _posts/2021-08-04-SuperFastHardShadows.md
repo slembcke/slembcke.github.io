@@ -126,8 +126,8 @@ In order to draw the shadow mask, you have to take those line segments that surr
 		circle(s0.x, s0.y, 5); ctx.fill()
 		circle(s1.x, s1.y, 5); ctx.fill()
 		
-		function axis_mat(m, s){
-			const dx = s.x - m.x, dy = s.y - m.y
+		function axis_mat(x, y){
+			const dx = x - m.x, dy = y - m.y
 			const len = Math.sqrt(dx*dx + dy*dy)/1.5
 			const xa = dx > 0 ? {x:+dx/len, y:+dy/len} : {x:-dx/len, y:-dy/len}
 			const ya = dx > 0 ? {x:-dy/len, y:+dx/len} : {x:+dy/len, y:-dx/len}
@@ -138,10 +138,10 @@ In order to draw the shadow mask, you have to take those line segments that surr
 		
 		ctx.fillStyle = "#000"
 		ctx.textAlign = "center"
-		const len_a = axis_mat(m, l0)
+		const len_a = axis_mat(l0.x, l0.y)
 		ctx.fillText("a", 0.5*len_a, -3)
 		ctx.fillText("3*a", 2*len_a, -3)
-		const len_b = axis_mat(m, l1)
+		const len_b = axis_mat(l1.x, l1.y)
 		ctx.fillText("b", 0.5*len_b, -3)
 		ctx.fillText("3*b", 2*len_b, -3)
 		
