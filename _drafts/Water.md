@@ -6,9 +6,6 @@ date: 2022-12-20
 permalink: Water
 ---
 
-<div id="shadow_projection"></div>
-<canvas id="shadow-projection"></canvas>
-
 <script>
 _LIFFT_REV6 = [
 	0x00, 0x20, 0x10, 0x30, 0x08, 0x28, 0x18, 0x38, 0x04, 0x24, 0x14, 0x34, 0x0C, 0x2C, 0x1C, 0x3C,
@@ -67,23 +64,54 @@ function lifft_complex_arr(n, type = Float32Array){
 	const s = type.BYTES_PER_ELEMENT, buff = new ArrayBuffer(2*s*n);
 	return lifft_complex(new type(buff, 0*n, n), new type(buff, s*n, n));
 }
+</script>
 
+<div id="shadow_projection"></div>
+<canvas id="wavies"></canvas>
+
+<script>
 (function(){
-	const canvas = document.getElementById("shadow-projection")
+	const canvas = document.getElementById("wavies")
 	canvas.width = 600
 	canvas.height = 400
 	const ctx = canvas.getContext("2d")
 	
 	const N = 128
 	
-	const spectra = lifft_complex_arr(N)
+	const bandlimited = lifft_complex_arr(N)
 	for(i = 0; i < N; i++){
-		const gamma = 0.8, y = i/gamma
+		const gamma = 1, y = i/gamma
 		const phase = lifft_cispi(2*Math.random())
-		const mag = Math.pow(y, 3)*Math.exp(-y)
+		const mag = 0.2*Math.pow(y, 3)*Math.exp(-y)
 		const z = lifft_cmul(phase, lifft_complex(mag, 0))
-		spectra.re[i] = z.re
-		spectra.im[i] = z.im
+		bandlimited.re[i] = z.re
+		bandlimited.im[i] = z.im
+	}
+	
+	function draw_wave(t, spectra, x0, y0, xs, ys){
+		const anim = lifft_complex_arr(N)
+		let w = lifft_cispi(t*1e-3)
+		for(i = 0; i < N; i++){
+			let p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]));
+			anim.re[i] = p.re, anim.im[i] = p.im;
+		}
+		let waves = lifft_forward_complex(anim)
+		
+		ctx.strokeStyle = "#CCC"
+		ctx.lineWidth = 1
+		ctx.beginPath()
+		ctx.rect(x0, y0 - ys, N*xs, 2*ys)
+		ctx.stroke()
+		ctx.clip()
+		
+		ctx.strokeStyle = "#000"
+		ctx.lineWidth = 3
+		ctx.beginPath()
+		ctx.moveTo(x0, y0 + ys*waves.re[0])
+		for(i = 1; i < waves.re.length; i++){
+			ctx.lineTo(x0 + xs*i, y0 + ys*waves.re[i])
+		}
+		ctx.stroke()
 	}
 	
 	function draw(t){
@@ -91,33 +119,11 @@ function lifft_complex_arr(n, type = Float32Array){
 		ctx.lineCap = ctx.lineJoin = "round"
 		
 		ctx.fillStyle = "#EEE"
-		ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-		ctx.strokeStyle = "#000"
-		ctx.lineWidth = 1.0
-		ctx.beginPath()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
 		
-		let w = lifft_cispi(t*1e-3), foo = lifft_complex_arr(N) //lifft_complex([], [])
-		for(i = 0; i < N; i++){
-			let bar = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]));
-			foo.re[i] = bar.re, foo.im[i] = bar.im;
-		}
-		let waves = lifft_forward_complex(foo)
-		
-		let x0 = 0, y0 = canvas.height/2, xs = canvas.width/(N - 1), ys = -20
-		
-		ctx.moveTo(x0, y0 + ys*waves.re[0])
-		for(i = 1; i < waves.re.length; i++){
-			ctx.lineTo(x0 + xs*i, y0 + ys*waves.re[i])
-		}
-		ctx.stroke()
-		
-		ctx.strokeStyle = "#888"
-		ctx.moveTo(x0, y0 + ys*waves.im[0])
-		for(i = 1; i < waves.re.length; i++){
-			(ctx.lineTo)(x0 + xs*i, y0 + ys*waves.im[i])
-		}
-		ctx.stroke()
+		const pad = 10
+		let x0 = pad, y0 = 100, xs = (canvas.width - 2*pad)/(N - 1), ys = -100
+		draw_wave(t, bandlimited, x0, y0, xs, ys)
 		
 		// if(!focused){
 		// 	ctx.setTransform(3, 0, 0, 3, 300, 50)
