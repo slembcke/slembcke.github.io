@@ -78,25 +78,16 @@ function lifft_complex_arr(n, type = Float32Array){
 	
 	const N = 128
 	
-	const bandlimited = lifft_complex_arr(N)
-	for(i = 0; i < N; i++){
-		const gamma = 1, y = i/gamma
-		const phase = lifft_cispi(2*Math.random())
-		const mag = 0.2*Math.pow(y, 3)*Math.exp(-y)
-		const z = lifft_cmul(phase, lifft_complex(mag, 0))
-		bandlimited.re[i] = z.re
-		bandlimited.im[i] = z.im
-	}
-	
 	function draw_wave(t, spectra, x0, y0, xs, ys){
 		const anim = lifft_complex_arr(N)
-		let w = lifft_cispi(t*1e-3)
 		for(i = 0; i < N; i++){
+			let w = lifft_cispi(Math.sqrt(i)*t*1e-3)
 			let p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]));
 			anim.re[i] = p.re, anim.im[i] = p.im;
 		}
 		let waves = lifft_forward_complex(anim)
 		
+		ctx.save()
 		ctx.strokeStyle = "#CCC"
 		ctx.lineWidth = 1
 		ctx.beginPath()
@@ -104,15 +95,54 @@ function lifft_complex_arr(n, type = Float32Array){
 		ctx.stroke()
 		ctx.clip()
 		
-		ctx.strokeStyle = "#000"
-		ctx.lineWidth = 3
+		ctx.strokeStyle = "#CCC"
+		ctx.lineWidth = 1
 		ctx.beginPath()
-		ctx.moveTo(x0, y0 + ys*waves.re[0])
-		for(i = 1; i < waves.re.length; i++){
-			ctx.lineTo(x0 + xs*i, y0 + ys*waves.re[i])
+		for(i = 0; i < waves.re.length; i++){
+			ctx.lineTo(x0 + xs*i, y0 + ys*Math.hypot(waves.re[i], waves.im[i]))
 		}
 		ctx.stroke()
+		
+		ctx.strokeStyle = "#0CF"
+		ctx.lineWidth = 3
+		ctx.beginPath()
+		for(i = 0; i < waves.re.length; i++){
+			ctx.lineTo(x0 + xs*i - ys*waves.im[i], y0 + ys*waves.re[i])
+		}
+		ctx.stroke()
+		
+		ctx.fillStyle = "#F80"
+		for(i = 0; i < waves.re.length; i += 12){
+			ctx.beginPath()
+			ctx.arc(x0 + xs*i - ys*waves.im[i], y0 + ys*waves.re[i] - 5, 3, 0, 2*Math.PI)
+			ctx.fill()
+		}
+		ctx.restore()
 	}
+	
+	const lo = lifft_complex_arr(N)
+	lo.re[1] = 0.6
+	
+	const hi = lifft_complex_arr(N)
+	hi.re[4] = 0.2
+	
+	const bi = lifft_complex_arr(N)
+	bi.re[1] = 0.6
+	bi.re[4] = 0.2
+	
+	const bandlimited = lifft_complex_arr(N)
+	function add_band(gamma, amplitude){
+		for(i = 0; i < N; i++){
+			const y = i/gamma
+			const phase = lifft_cispi(2*Math.random())
+			const mag = amplitude*Math.pow(y, 4)*Math.exp(-y)
+			const z = lifft_cmul(phase, lifft_complex(mag, 0))
+			bandlimited.re[i] += z.re
+			bandlimited.im[i] += z.im
+		}
+	}
+	add_band(0.6, 0.040)
+	add_band(2.0, 0.003)
 	
 	function draw(t){
 		ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -122,8 +152,11 @@ function lifft_complex_arr(n, type = Float32Array){
 		ctx.clearRect(0, 0, canvas.width, canvas.height)
 		
 		const pad = 10
-		let x0 = pad, y0 = 100, xs = (canvas.width - 2*pad)/(N - 1), ys = -100
-		draw_wave(t, bandlimited, x0, y0, xs, ys)
+		let x0 = pad, xs = (canvas.width - 2*pad)/(N - 1), ys = -40
+		draw_wave(t, lo, x0,  50, xs, ys)
+		draw_wave(t, hi, x0, 150, xs, ys)
+		draw_wave(t, bi, x0, 250, xs, ys)
+		draw_wave(t, bandlimited, x0, 350, xs, ys)
 		
 		// if(!focused){
 		// 	ctx.setTransform(3, 0, 0, 3, 300, 50)
