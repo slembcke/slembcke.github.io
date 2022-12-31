@@ -188,7 +188,7 @@ Hot-loading on Windows is basically the same. Instead of `dlopen()` and `dlsym()
 
 ## What If I'm Using a Job System?
 
-In my game, I use a [job system](/drift/2020/08/28/DriftJobs.html), and I don't use a traditional main thread. I put off implementing hot-loading for quite a while because I thought the job system would add a lot of complications. Once I sat down and thought about it turned out to be really easy though! When I want to hot-load, instead of scheduling the next frame, I schedule a job defined in the host executable that waits for the currently running jobs to finish, then triggers the hot-load. There's a little extra indirection involved, but it's still pretty simple.
+In my game, I use a [job system](DriftJobs), and I don't use a traditional main thread. I put off implementing hot-loading for quite a while because I thought the job system would add a lot of complications. Once I sat down and thought about it turned out to be really easy though! When I want to hot-load, instead of scheduling the next frame, I schedule a job defined in the host executable that waits for the currently running jobs to finish, then triggers the hot-load. There's a little extra indirection involved, but it's still pretty simple.
 
 ## Get It While It's Hot!
 

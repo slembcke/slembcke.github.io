@@ -16,4 +16,4 @@ Project Drift is the working name for my asteroid mining adventure game. While t
 # Related Blog Posts:
 
 * [Drift Job System](DriftJobs)
-* [Drift Rendering](/Drift-Renderer)
+* [Drift Rendering](Drift-Renderer)

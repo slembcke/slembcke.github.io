@@ -3,10 +3,10 @@ layout: post
 title: "Wave Simulation"
 description: "Wave Simulation with FFTs."
 date: 2022-12-20
-permalink: WaveSim
+permalink: WaveSim.html
 ---
 
-<script src="/js/lifft.js" /></script>
+<script src="js/lifft.js" /></script>
 
 <div id="shadow_projection"></div>
 <canvas id="wavies" style="border:solid 1px #0002;"></canvas>
@@ -64,7 +64,7 @@ permalink: WaveSim
 		return tangent
 	}
 	
-	let mbutton = false
+	let mbutton = true
 	let mpos = {x: 0, y: 0}
 	let mprev = {x: 0, y: 0}
 	const mradius = 20
@@ -81,7 +81,7 @@ permalink: WaveSim
 		mprev.y = mpos.y
 		t0 = t
 		
-		if(mbutton){
+		if(0 < mpos.x && mpos.x < canvas.width){
 			const wave = lifft_inverse_complex(spectra)
 			
 			const scale = spectra.n/canvas.width
@@ -170,8 +170,6 @@ permalink: WaveSim
 	animate(0)
 	
 	canvas.onmousemove = (e => mpos = {x: e.offsetX, y: e.offsetY})
-	canvas.onmousedown = (e => mbutton = true)
-	canvas.onmouseup = (e => mbutton = false)
-	canvas.onmouseleave = (e => mbutton = false)
+	canvas.onmouseenter = (e => mprev = mpos = {x: e.offsetX, y: e.offsetY})
 })()
 </script>

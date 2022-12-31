@@ -33,7 +33,7 @@ I decided right away I had to reverse engineer how it was done, and over the yea
 
 ## Builtin!
 
-![logos](/images/lighting-2d/logos.png)
+![logos](images/lighting-2d/logos.png)
 
 A quick search makes it look like Godot, Game Maker, Construct, and Unity all have builtin components for 2D lighting now. If it works well for you then you are good to go! This is why people use engines after all.
 
@@ -64,7 +64,7 @@ Forward rendering is one of the most quintessential algorithms for 3D. While the
 
 # Deferred Rendering
 
-![gbuffer example](/images/lighting-2d/gbuffer.png)
+![gbuffer example](images/lighting-2d/gbuffer.png)
 
 (CC BY-SA 4.0 via Wikipedia - [Deferred Rendering](https://en.wikipedia.org/wiki/Deferred_shading))
 
@@ -85,9 +85,9 @@ Deferred Rendering is a solution to the number of rendering passes required by f
 
 A very common and simple technique for 2D games is to generate a screen space lightmap each frame. Basically you just need somewhere to render offscreen. Draw a bunch of blurry blobs as sprites, then multiply the lightmap over the top of the framebuffer. Dark areas become dark, and lit areas get tinted by the light. This is surprisingly versatile, and is the basis for many other algorithms and implementations.
 
-![lightmap example](/images/lighting-2d/lightmap-2d-a.png)
-![lightmap example](/images/lighting-2d/lightmap-2d-b.png)
-![lightmap example](/images/lighting-2d/lightmap-2d-c.png)
+![lightmap example](images/lighting-2d/lightmap-2d-a.png)
+![lightmap example](images/lighting-2d/lightmap-2d-b.png)
+![lightmap example](images/lighting-2d/lightmap-2d-c.png)
 
 **Pros:**
 * Very easy to implement using offscreen rendering and a couple blend modes.
@@ -106,7 +106,7 @@ If you want shadows in your lightmap, then you'll need to only add light where t
 
 To render the mask, you just need to turn each line segment into a quad. Two of the corners are just the endpoints of the segment, and the other two get pushed away by adding an offset. Render all the line segments this way, and you have a shadow mask!
 
-![shadow projection](/images/lighting-2d/shadow-projection.svg)
+![shadow projection](images/lighting-2d/shadow-projection.svg)
 
 Something like this in code:
 ```
@@ -133,8 +133,8 @@ Another option is to only render the pixels where a light will shine using a [vi
 
 Soft shadows are a pretty obvious next step, but are unfortunately _much_ more difficult to achieve with good quality. In my current game, I render shadows at 1/4 resolution for performance on low end machines such as the Raspberry Pi. Though the hard shadows look passable when animated, it's not hard to prefer the soft version. :)
 
-![hard shadows](/images/lighting-2d/shadow-hard.png)
-![soft shadows](/images/lighting-2d/shadow-soft.png)
+![hard shadows](images/lighting-2d/shadow-hard.png)
+![soft shadows](images/lighting-2d/shadow-soft.png)
 
 One of the first algorithms I had heard of to implement soft shadows was using [shadow fins](http://archive.gamedev.net/archive/reference/articles/article2032.html). Basically you drew hard shadows into the framebuffer's destination alpha using some variation of the hard shadowing algorithm, then you drew soft "fins" on the edges of the shadows from a texture. I was personally never happy enough with this technique to keep it around. It was too fiddly, and I never found a good way to keep the penumbra from "popping" as the fins moved from one vertex to another.
 
@@ -153,7 +153,7 @@ My own algorithm requires a lot of math, but almost all of the work happens in a
 
 Forward and deferred rendering work with normal mapping because they treat each light individually. So when they shade a pixel, you know which direction the light is coming from. This doesn't work with screen space lightmaps because all the light gets mixed together in the buffer. Screen space lightfields fix this by storing an approximation of a lit sphere at each pixel, basically like a per-pixel lightprobe. To use it, you render the lightfield first, and then when drawing sprites you sample the lightfield and use the normal to look up the light value on that "approximately lit sphere". It even works nicely with the shadowing algorithms for lightmaps. 
 
-![screen space lightfield](/images/lighting-2d/lightfield.png)
+![screen space lightfield](images/lighting-2d/lightfield.png)
 
 If you are familiar with spherical harmonic light probes, they take a lot of math to understand them, but their implementation is a just a bunch of dot products and arithmetic. My 2D probes are just a simpler, per-pixel version of that based on fourier series, and the implementation is even simpler. I've been developing Project Drift to run with full lightfields and soft shadows at 60 hz on a Raspberry Pi 4. It runs great so far. :)
 

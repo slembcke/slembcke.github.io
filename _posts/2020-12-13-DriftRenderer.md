@@ -7,7 +7,7 @@ categories: Drift
 permalink: Drift-Renderer
 ---
 
-![Project Drift screenshot](/images/DriftRenderer/Key.png)
+![Project Drift screenshot](images/DriftRenderer/Key.png)
 
 ## Story Time
 
@@ -234,13 +234,13 @@ Since one of the main features I wanted in the game was to have large scale defo
 
 While not really a renderer feature per-se, I use the texture streaming for a simple virtual texturing scheme in the game for the deformable terrain density texture. Since it's a pixel art game, nearly everything is nearest sampled... except for the one texture I want to virtualize. On top of that, it needs to have high quality derivatives for the lighting. Drat! Fortunately, I found a fun solutions to both problems that I'm quite pleased with. Since I only need a single channel for the density value, I pre-gather a texel's neighbor samples into an RGBA texture while uploading tiles into the cache. Then in the shader with a single nearest neighbor sample, and some mild decoding I can get a high quality density derivative and a linearly filtered value.
 
-![virtual texturing](/images/DriftRenderer/DensityTiles.png)
+![virtual texturing](images/DriftRenderer/DensityTiles.png)
 
 A section of terrain vs. it's density tiles. The slight discoloration is actually the encoding of the derivative. It works even better than when I was using a page table and screen space derivatives before. \o/
 
 ## Threading
 
-Last, but not least. I wanted to have good support for threading in the renderer. The threaded renderer I made for Cocos worked so well, I've never really wanted to take a step back from it. Worse, I decided to take a step forward and make my own [fiber based job system](/drift/2020/08/28/DriftJobs.html) for Project Drift. So far I've been having a blast with it, and it works extremely well! While I'm sure I could have gotten away with acceptable performance with just a single thread, I also wanted this project to be a learning experience where I get to try new things and try to stay current. I had considered implementing the ability to have multiple command recording threads... but nah. My renderer is already so heavily batch oriented it just doesn't make any sense.
+Last, but not least. I wanted to have good support for threading in the renderer. The threaded renderer I made for Cocos worked so well, I've never really wanted to take a step back from it. Worse, I decided to take a step forward and make my own [fiber based job system](DriftJobs) for Project Drift. So far I've been having a blast with it, and it works extremely well! While I'm sure I could have gotten away with acceptable performance with just a single thread, I also wanted this project to be a learning experience where I get to try new things and try to stay current. I had considered implementing the ability to have multiple command recording threads... but nah. My renderer is already so heavily batch oriented it just doesn't make any sense.
 
 ## Thoughts
 

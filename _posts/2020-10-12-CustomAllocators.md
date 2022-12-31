@@ -40,7 +40,7 @@ Several of the common allocators you hear people talk about are so simple, you c
 
 ### 1) Slab Allocator
 
-![Slab Allocator Diagram](/images/SlabAllocator.svg)
+![Slab Allocator Diagram](images/SlabAllocator.svg)
 
 The collision pair example from Chipmunk2D is basically a slab allocator. The idea is that your allocator just needs to keep a list of large blocks of memory (slabs) that you have allocated, and break those into little fixed sized blocks of memory for your objects that you store in a linked list of free allocations. The trick is to use the allocations themselves as linked list nodes so you don't have to waste any extra memory for tracking. Allocating memory becomes as fast as pushing or popping nodes onto a linked list, and you only have to talk to the OS when you run out of space in your existing slabs. Additionally, all of the memory is packed together which helps play nice with the CPU cache. As a bonus, you know for sure that you are packing small, short lived allocations together and minimizing fragmentation of your main memory space.
 
@@ -48,7 +48,7 @@ The collision pair example from Chipmunk2D is basically a slab allocator. The id
 
 ### 2) Linear Allocator
 
-![Linear Allocator Diagram](/images/LinearAllocator.svg)
+![Linear Allocator Diagram](images/LinearAllocator.svg)
 
 Linear allocators (sometimes called bump allocators) are one of the simplest and most useful custom allocators. The short version: Given a block of memory, start at the beginning and make allocations one after another. When you are done with all the allocations, free or reuse the block. Generally speaking you also need to deal with alignment, overflow, and out of memory issues, but none of that is particularly complicated. Linear allocators are great when you need scratch memory to build a temporary data structure, or otherwise know that all the data you are allocating has a finite lifespan. This works well when processing a user input event in a GUI, or a frame in a game. Not only does your data end up well packed for the CPU cache, but the actual cost of the allocation is just a tiny bit of arithmetic, and deallocation is basically free! The biggest downside of linear allocators is that you need to know the worst case memory usage up front.
 
@@ -56,7 +56,7 @@ Linear allocators (sometimes called bump allocators) are one of the simplest and
 
 ### 3) Zone Allocator
 
-![Zone Allocator Diagram](/images/ZoneAllocator.svg)
+![Zone Allocator Diagram](images/ZoneAllocator.svg)
 
 Zone allocators (sometimes called arena allocators) make linear allocators more flexible by relaxing the upfront memory allocation. Instead of a single block of memory, you make a series of linear allocators. Whenever one runs out of space, allocate another block and switch to it. Then all you need to do is keep a list of the blocks you allocate so they can be freed (or returned to a pool) when you are done with the zone.
 

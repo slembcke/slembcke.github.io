@@ -4,13 +4,13 @@ title: About
 permalink: /about/
 ---
 
-![Photo of me](/images/about/headshot.jpg)
+![Photo of me](images/about/headshot.jpg)
 
 Welcome to my blog! I've been working in game dev, and game adjacent fields since the early 2000's.
 
 ## Open Source Origins
 
-![Chipmunk2D example](/images/about/chipmunk.jpg)
+![Chipmunk2D example](images/about/chipmunk.jpg)
 
 My first big success was [Chipmunk2D](https://github.com/slembcke/Chipmunk2D), an open source 2D physics library. The timing for it was just perfect to get used by a ton of early mobile games. As a result, I got involved in a lot of other open source game projects such as Cocos2D, and worked on countless games for smaller companies as a contractor. Around this time I also started a company called [Howling Moon Software](http://howlingmoonsoftware.com/index.php) with a college buddy of mine.
 
@@ -24,10 +24,10 @@ I also have some other game libraries that people might find useful.
 
 Our work on game technology also led to a lot of work in "game adjacent" fields. This has included real-time mapping and visualization software that ran on drones (in flight!), music education software that did real-time audio analysis to give the student feedback, and path planning software for horizontal directional drilling machines. It's quite satisfying to take game tech and use it for real life problems. :)
 
-![drone map example](/images/RealTimeMapping.jpg)
+![drone map example](images/RealTimeMapping.jpg)
 
 ## Retro Dev
 
 In the last few years, I've also gotten into retro-dev, and love it! I started with the NES, and have finished a few projects for that. Several of them for the [Global Game Jam](https://globalgamejam.org/users/slembcke). My favorite is still [Critical Match](https://slembcke.itch.io/critical-match) which you can play on itch.io in your web browser. :D I've also started several projects for GameBoy, GameBoy Advance, and Sega Genesis that I've never finished. >_>
 
-![NES cartridge](/images/about/nes_cartridge_model.jpg)
+![NES cartridge](images/about/nes_cartridge_model.jpg)

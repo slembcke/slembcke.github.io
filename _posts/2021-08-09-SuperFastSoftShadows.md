@@ -9,9 +9,9 @@ permalink: SuperFastSoftShadows
 
 <canvas id="glcanvas" width="640" height="480"></canvas>
 <script src="/js/lighting-2d/soft-shadows.js" defer></script>
-[WebGL example source code](/js/lighting-2d/soft-shadows.js)
+[WebGL example source code](js/lighting-2d/soft-shadows.js)
 
-This article is an extension of the article about [hard shadows](/SuperFastHardShadows). If you haven't read that one yet, you definitely will want to do that first! The math in this article gets considerably more involved, and you'll want to have a good foundation.
+This article is an extension of the article about [hard shadows](SuperFastHardShadows). If you haven't read that one yet, you definitely will want to do that first! The math in this article gets considerably more involved, and you'll want to have a good foundation.
 
 # Lighting in 2D Games Series
 
@@ -23,9 +23,9 @@ This article is an extension of the article about [hard shadows](/SuperFastHardS
 
 Soft shadows just make everything look better! I think this is true even in pixel art games where the aliased, crunchy look of hard shadows _should_ fit in better. Because of the potential, I spent years, pondering about a better way to draw them. Basically I wasn't willing to give up my nice hardware accelerated solution that had such a minimal CPU impact for a little blur. I was aware of a few variations of "[shadow fins](http://archive.gamedev.net/archive/reference/articles/article2032.html)", but they all seemed to involve a lot of CPU work, and some of them had some nasty motion artifacts where the penumbras would suddenly jump as an object or light moved.
 
-![soft shadow example](/images/lighting-2d/soft-shadows-asteroids.png)
+![soft shadow example](images/lighting-2d/soft-shadows-asteroids.png)
 
-Around 2015, I finally had a breakthrough while working on the Cocos2D-SpriteBuilder project. (a mobile oriented, open source game framework) The first version of Super Fast Soft Shadows (SFSS) was born! Unfortunately, the company sponsoring my open source contributions folded and was dissolved. We had to scramble to find some new projects to pay the bills, and so I ported the code over to Unity3D and tried to sell it on the Asset Store. It was a very mild success, but the algorithm didn't change until I revived and rejuvenated it for [Project Drift](/ProjectDrift)
+Around 2015, I finally had a breakthrough while working on the Cocos2D-SpriteBuilder project. (a mobile oriented, open source game framework) The first version of Super Fast Soft Shadows (SFSS) was born! Unfortunately, the company sponsoring my open source contributions folded and was dissolved. We had to scramble to find some new projects to pay the bills, and so I ported the code over to Unity3D and tried to sell it on the Asset Store. It was a very mild success, but the algorithm didn't change until I revived and rejuvenated it for [Project Drift](ProjectDrift)
 
 This article has been rattling around my brain for years. I pitched and had it rejected as a GDC presentation twice. Though since the topic of 2D lighting is a pretty niche I wasn't too surprised. Instead I've been meaning to write it up properly as a blog post as soon as I "get around to it". Today I did! :D
 
@@ -33,13 +33,13 @@ This article has been rattling around my brain for years. I pitched and had it r
 
 Lets dive right in by looking at a diagram of a light casting a penumbra around the corner of a wall:
 
-![penumbra diagram](/images/lighting-2d/penumbra-diagram-half.svg)
+![penumbra diagram](images/lighting-2d/penumbra-diagram-half.svg)
 
 You can find the bounds of the penumbra by drawing lines through the corner of the shadow and tangent to the light's surface. Now imagine you are an observer standing in that diagram. If you were standing in the "no shadow" region, you would be able to see the whole light source with the wall casting the shadow to its left. If you walked down below the top red line, then you would see the wall covering part of the light source. You are now in the penumbra, and the percentage of the light's area covered is the strength of the shadow at your location. If you walked to the left of the other red line, then the light would be completely covered. You are now in the umbra, and it's black because no light can reach you. The little icons in the image should help you visualize this.
 
 Again, imagine standing in the penumbra and walk along one of the dashed lines. Although the wall and light would get farther away, the percentage of the light covered by the wall wouldn't change. Any line you pick in the penumbra that goes through the wall's corner will have this property. Now lets reduce the size of the wall so that it's smaller than the light itself:
 
-![penumbra diagram](/images/lighting-2d/penumbra-diagram-full.svg)
+![penumbra diagram](images/lighting-2d/penumbra-diagram-full.svg)
 
 When I first saw this diagram, I thought I would surely have to generate a mesh based on the geometry of the red lines. The penumbra seems like just a simple gradient, but how could the umbra and antumbra be handled without special cases? Fortunately I was completely wrong! After thinking about the problem over a few years, I finally realized the existence of those dashed lines means it's all just linear math. This is extremely good news as GPUs have all sorts of silicon dedicated to handling linear math burned right into their very essence!
 
@@ -68,7 +68,7 @@ quad_vertexes = {
 
 If we are going to draw the entire shadow with a single quad, the first thing we need to do is make the quad cover the penumbra. We can, and will use the infinite projection math from the previous article again. The only difference is that we need to use the delta between the endpoint and a tangent point instead of the light's center.
 
-![penumbra geometry](/images/lighting-2d/penumbra-geometry.svg)
+![penumbra geometry](images/lighting-2d/penumbra-geometry.svg)
 
 I can already hear some of you screaming, and yes, I know it's not quite correct. I originally used the correct tangent point, but this approximation has a few advantages I'll discuss later. Right now, it's enough to say that it's simpler to explain. All you need to do is normalize the delta, rotate it 90 degrees in the right direction for the current endpoint, and multiply by the light's radius. As GLSL code in the vertex shader it looks something like this:
 
@@ -112,11 +112,11 @@ Now that we can cover the full area of the shadow, we need to start figuring out
 
 So how do we draw a simpler gradient that is still correct? Let's start by looking at a plot of  `smoothstep(-1.0, 1.0, uv.x/uv.y)`:
 
-![gradient x/y](/images/lighting-2d/gradient-x-y.svg)
+![gradient x/y](images/lighting-2d/gradient-x-y.svg)
 
 This already has some nice properties! It comes to a point in the middle. It has a nice falloff so you don't see the discontinuities in the derivative. It's implicitly clamped to the range [0, 1]. It's even "close enough" to the integral of `cos(pi*x)` to give us a nice approximation of the solid angle of a spherical light source. Lastly, it's cheap! The only problem with it is the inverted copy of the gradient when the y-value is negative, but can easily be blacked out using `step()`. Now the only issue is how to transform the pixel coordinates into the gradient's coordinates. Hmm... Transforming coordinates of a linear system? Matrices!
 
-![penumbra gradient matrix](/images/lighting-2d/penumbra-gradient-matrix.svg)
+![penumbra gradient matrix](images/lighting-2d/penumbra-gradient-matrix.svg)
 
 We can construct a coordinate basis using `-offset` as the the x-axis, and `delta` as the y-axis. Then to convert from endpoint relative coordinates to penumbra gradient coordinates, all we need to do use the basis vectors as the columns of a matrix, and invert it. If we calculate the gradient coordinates of all for corners of the shadow quad, we can let the GPU interpolate them, and then all the fragment shader would need to do is calculate the gradient above!
 
@@ -134,7 +134,7 @@ vec2 penumbra_b = adjugate(mat2(-offset_b,  delta_b))*(delta - mix(offset, delta
 
 The extra negation inside the `mat2()` constructors is necessary to preserve the sign change dividing by the determinant would have caused. To explain the significance of `delta - mix(offset, delta_a, w)`, consider it's value in the following diagram for various values of `a_shadow_coord`.
 
-![penumbra gradient coords](/images/lighting-2d/penumbra-gradient-coords.svg)
+![penumbra gradient coords](images/lighting-2d/penumbra-gradient-coords.svg)
 
 These vectors all line up the the direction along the gradient that we need to interpolate for the fragment shader. Now all we have to do is pass them to the fragment shader and combine them.
 
@@ -174,7 +174,7 @@ Subtracting shadows from the mask only works correctly for shadows that are adja
 
 When a light source gets split by a line segment's plane, the _correct_ thing to do would be to cast a shadow from both sides, but I could never figure out a reasonable way to handle this. Instead, I just clip the shadows to prevent them from projecting forwards. The approximate tangent calculation used earlier also helps slightly by avoiding some of the cases where this happens.
 
-![penumbra clipping](/images/lighting-2d/penumbra-clipping.svg)
+![penumbra clipping](images/lighting-2d/penumbra-clipping.svg)
 
 In the vertex shader, I calculate the normal of the segment and use it to calculate an "edge" coordinate that I clip by in the fragment shader.
 
@@ -200,7 +200,7 @@ gl_FragColor = vec4((1.0 - penumbra)*step(v_edges.z, 0.0));
 
 This does create some artifacts since part of the shadow that should be cast in front of the segment is missing. Fortunately, they are usually pretty subtle and only visible at specific angles. It seems like a solvable problem, but not one that is worth the effort or complexity in my opinion.
 
-![clipping artifact](/images/lighting-2d/penumbra-clipping-artifacts.png)
+![clipping artifact](images/lighting-2d/penumbra-clipping-artifacts.png)
 
 # HDR Lightmaps
 
@@ -216,7 +216,7 @@ I eventually came up with a better, but fairly bizarre solution. I'll cover this
 
 A final optional effect I would highly recommend is to allow the light to penetrate slightly into surfaces. This has a few benefits. The first is that it allows you to light up the edges of objects, letting the player see a bit of detail on them. The second is that the near edge of the shadow is still and aliased, and this is a cheap way to soften it. Beyond just the aesthetics, this makes it viable to reduce the resolution of your lightmap without sacrificing any noticeable details _and_ vastly decreasing the performance cost. It does have some minor derivative discontinuity artifacts at corners, but they mostly disappear with subsampling. Overall, it can make soft shadows not only look better, but run faster at the same time! :D It's a win/win scenario.
 
-![light penetration](/images/lighting-2d/shadow-soft.png)
+![light penetration](images/lighting-2d/shadow-soft.png)
 
 The idea is to figure out how far the light went to get to the current pixel after intersecting the segment. This calculation is yet another linear system that we can just calculate as a matrix inverse. Like the penumbras, we only care about a ratio in the fragment shader, so we can substitute the adjugate matrix again to save a few cycles. Given the intersection position and the pixel position in the fragment shader, all you need to do is find the distance and apply a falloff function.
 

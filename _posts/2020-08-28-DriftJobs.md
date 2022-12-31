@@ -15,13 +15,13 @@ A few years ago I implemented command buffers on top of Cocos2D for the SpriteBu
 
 A couple years later I was working on a project to do real-time drone mapping using an onboard Tegra system. In the first iteration of the project we used the drone's telemetry, a calibrated camera, and a high resolution global terrain mesh to generate a real-time preview map. So as new photos were taken, it would regenerate image tiles, compress them, and stream them back to the operator's tablet. (Unfortunately the project was cancelled, and it never ran on a real flight. :-\ ) It was however highly jobified using libdispatch, and taking full advantage of the GPU and all CPU cores to crunch through gigabytes of photos was highly satisfying. :D
 
-![RealTimeMapping](/images/RealTimeMapping.jpg)
+![RealTimeMapping](images/RealTimeMapping.jpg)
 
 Since then I've made some toy engines with main/render threads in them, played with [Bikeshed](https://github.com/DanEngelbrecht/bikeshed), and tried Unity's (extremely limited) job system. Nothing was very satisfying until I read Christian Gyrling's GDC presentation called [Parallelizing the Naughty Dog Engine Using Fibers](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine). It was so simple, and more importantly it looked _fun_ to try. Even more fascinating is the idea to do away with the main thread. Once you have a robust system to synchronize dozens of jobs into a delicate little dance, what do you need a rigid main loop for?
 
 # Jobbing in 2020
 
-Building Christian's job system on top of Tina was even easier than I expected, and I was so pleased with the result that I turned it into it's own [header lib](https://github.com/slembcke/Tina/blob/master/tina_jobs.h). Additionally, I added queues similar to libdispatch. If you start run loops for a certain queue on multiple threads, it's a parallel queue. If you start just one thread for a particular queue, it's a serial queue. Lastly, you can set a queue to defer to another so that when your high priority queue is empty it will start pulling jobs from the low priority queue. In [Project Drift](/ProjectDrift), I run a serial queue for IO on the main thread, a dedicated thread for the serial graphics queue, and a number of worker threads to run the rest of the jobs in parallel.
+Building Christian's job system on top of Tina was even easier than I expected, and I was so pleased with the result that I turned it into it's own [header lib](https://github.com/slembcke/Tina/blob/master/tina_jobs.h). Additionally, I added queues similar to libdispatch. If you start run loops for a certain queue on multiple threads, it's a parallel queue. If you start just one thread for a particular queue, it's a serial queue. Lastly, you can set a queue to defer to another so that when your high priority queue is empty it will start pulling jobs from the low priority queue. In [Project Drift](ProjectDrift), I run a serial queue for IO on the main thread, a dedicated thread for the serial graphics queue, and a number of worker threads to run the rest of the jobs in parallel.
 
 Using Tina Jobs at it's most basic looks something like this:
 ```c
