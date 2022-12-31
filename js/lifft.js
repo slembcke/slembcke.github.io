@@ -33,11 +33,11 @@ function _lifft_setup(x){
 	return result;
 }
 
-const lifft_cadd = (x, y) => lifft_complex(x.re + y.re, x.im + y.im);
-const lifft_csub = (x, y) => lifft_complex(x.re - y.re, x.im - y.im);
-const lifft_cmul = (x, y) => lifft_complex(x.re*y.re - x.im*y.im, x.re*y.im + x.im*y.re);
-const lifft_cabs = (x) => Math.hypot(x.re, x.im);
-const lifft_cispi = (x) => lifft_complex(Math.cos(Math.PI*x), Math.sin(Math.PI*x));
+const lifft_cadd = ((x, y) => lifft_complex(x.re + y.re, x.im + y.im));
+const lifft_csub = ((x, y) => lifft_complex(x.re - y.re, x.im - y.im));
+const lifft_cmul = ((x, y) => lifft_complex(x.re*y.re - x.im*y.im, x.re*y.im + x.im*y.re));
+const lifft_cabs = (x => Math.hypot(x.re, x.im));
+const lifft_cispi = (x => lifft_complex(Math.cos(Math.PI*x), Math.sin(Math.PI*x)));
 
 function _lifft_process(re, im, n){
 	for(let stride = 1; stride < n; stride *= 2){
