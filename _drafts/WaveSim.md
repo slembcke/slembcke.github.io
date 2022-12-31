@@ -3,7 +3,7 @@ layout: post
 title: "Wave Simulation"
 description: "Wave Simulation with FFTs."
 date: 2022-12-20
-permalink: WaveSim.html
+permalink: WaveSim
 ---
 
 <script src="js/lifft.js" /></script>
@@ -45,18 +45,15 @@ permalink: WaveSim.html
 		
 		const tangent = lifft_complex_arr(n, spectra.type)
 		for(let i = 0; i <= n/2; i++){
-			const j = -i & (n - 1)
-			let p = lifft_complex(spectra.re[i], spectra.im[i])
-			let q = lifft_complex(spectra.re[j], spectra.im[j])
-			
 			const phase = rate*Math.sqrt(i)*Math.PI, mag = Math.exp(damping*i)
 			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
 			
-			p = lifft_cmul(p, w)
+			p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
 			spectra.re[i] = +p.re, spectra.im[i] = +p.im
 			tangent.re[i] = +p.im, tangent.im[i] = -p.re
 			
-			q = lifft_cmul(q, w)
+			const j = -i & (n - 1)
+			q = lifft_cmul(w, lifft_complex(spectra.re[j], spectra.im[j]))
 			spectra.re[j] = +q.re, spectra.im[j] = +q.im
 			tangent.re[j] = -q.im, tangent.im[j] = +q.re
 		}
@@ -64,39 +61,31 @@ permalink: WaveSim.html
 		return tangent
 	}
 	
-	let mbutton = true
 	let mpos = {x: 0, y: 0}
 	let mprev = {x: 0, y: 0}
 	const mradius = 20
 	
 	let t0 = 0
 	function draw(t){
-		const dt = t - t0
-		const mvel = {
-			x:(mpos.x - mprev.x)/(dt + Number.MIN_VALUE),
-			y:(mpos.y - mprev.y)/(dt + Number.MIN_VALUE),
-		};
-		
-		mprev.x = mpos.x;
-		mprev.y = mpos.y
-		t0 = t
+		const dt = t - t0 + Number.MIN_VALUE
+		const mvel = {x:(mpos.x - mprev.x)/dt, y:(mpos.y - mprev.y)/dt};
+		mprev = mpos; t0 = t
 		
 		if(0 < mpos.x && mpos.x < canvas.width){
 			const wave = lifft_inverse_complex(spectra)
 			
-			const scale = spectra.n/canvas.width
+			const scale = wave.n/canvas.width
 			const mx = mpos.x*scale
 			const my = canvas.height/2 - mpos.y - wave.re[Math.floor(mx)]/scale
-			const width = Math.max(-1.5*my/mradius, 1.5)
+			
 			const mag = Math.min(Math.max(0, 1 - my/mradius), Math.exp(0.5*my/mradius))
-			for(let i = 0; i < spectra.n; i++){
+			const width = Math.max(-1.5*my/mradius, 1.5)
+			for(let i = 0; i < wave.n; i++){
 				const dx = mx - i - 0.5, center = dx/width
 				const denom = -width*(1 + Math.exp(center*center))
 				
-				// TODO not rate independent
 				const damp = 1 - Math.exp(0.3*mag/denom)
-				wave.im[i] -= (mvel.y/spectra.n + wave.im[i])*damp
-				wave.re[i] -= (dx*mvel.x/spectra.n + wave.re[i])*damp
+				wave.im[i] -= ((dx*mvel.x + mvel.y)/wave.n + wave.im[i])*damp
 			}
 			spectra = lifft_forward_complex(wave)
 		}
@@ -124,7 +113,7 @@ permalink: WaveSim.html
 		// Draw wave energy
 		draw_wave("#0002", 1, i => [i, Math.hypot(wave_y.re[i], wave_y.im[i])])
 		
-		const g_scale = 0.33
+		const g_scale = 0.25
 		
 		// // Draw spokes
 		// ctx.strokeStyle = "#0002"
@@ -173,3 +162,5 @@ permalink: WaveSim.html
 	canvas.onmouseenter = (e => mprev = mpos = {x: e.offsetX, y: e.offsetY})
 })()
 </script>
+
+(grey line is wave energy)

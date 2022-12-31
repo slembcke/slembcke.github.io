@@ -1,19 +1,24 @@
 update:
 	bundler install
 
-clean: build
+clean:
 	bundler exec jekyll clean
 
-build: build
-	bundler exec jekyll build
+build:
+	bundler exec jekyll build --unpublished --drafts --future --baseurl /temp/blog
 
-serve: build
-	bundler exec jekyll server --incremental --livereload --unpublished --drafts
+temp: build
+	rsync -aP _site/ slembcke.net:files.slembcke.net/temp/blog/
 
-review: build
+serve:
+	bundler exec jekyll server --livereload --unpublished --drafts
+
+review:
 	bundler exec jekyll server
 
 publish:
 	git push origin master:published
 
-.PHONY: update build serve review
+.PHONY: update clean temp serve review publish
+
+# --future
