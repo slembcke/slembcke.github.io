@@ -12,6 +12,10 @@ People _love_ water in video games. I can't count the number of times I've heard
 
 ![Water in Half Life 2](images/waves/hl2-water.jpg)
 ![Water in Subnautica](images/waves/subnautica-water.jpg)
+{: style="text-align: center"}
+
+Water in Half Life 2 and Subnautica.
+{: style="text-align: center"}
 
 Rendering and animating water are both pretty big topics, so this article is going to detail a particular algorithm for procedurally animating interactive water waves. Something like this!
 
@@ -121,11 +125,17 @@ Rendering and animating water are both pretty big topics, so this article is goi
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
 		ctx.lineCap = ctx.lineJoin = "round"
 		
-		ctx.strokeStyle = "#0CF"
-		ctx.lineWidth = 3/scale
 		ctx.beginPath()
-		for(let i = 0; i < waves.n; i++) ctx.lineTo(i - 0.25*wave_x.re[i], wave_y.re[i])
-		ctx.stroke()
+		ctx.lineTo(0, -100)
+		for(let i = 0; i < waves.n; i++){
+			ctx.lineTo(i - 0.25*wave_x.re[i], wave_y.re[i])
+		}
+		ctx.lineTo(canvas.width, -100)
+		ctx.fillStyle = "#0CF"
+		ctx.fill()
+		// ctx.strokeStyle = "#0004"
+		// ctx.lineWidth = 3/scale
+		// ctx.stroke()
 
 		// Draw mouse
 		ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -138,7 +148,7 @@ Rendering and animating water are both pretty big topics, so this article is goi
 		ctx.stroke()
 		
 		if(!mfocus){
-			ctx.setTransform(3, 0, 0, 3, canvas.width/2, canvas.height/2)
+			ctx.setTransform(3, 0, 0, 3, canvas.width/2, canvas.height/3)
 			ctx.fillStyle = "#0008"
 			ctx.textAlign = "center"
 			ctx.fillText("Use Mouse to Interact", 0, 0)
@@ -152,52 +162,166 @@ Rendering and animating water are both pretty big topics, so this article is goi
 })()
 </script>
 
-The algorithm itself extends to 3D easily enough, though I'll be doing it in 2D so it's easier to make visualizations.
+The algorithm itself extends to 3D easily enough, though I'll be doing it in 2D so it's easier to make quick visualizations.
 
-## Lots of Algorithms
+## Lots of Water Algorithms
 
-There's actually quite a lot of algorithms for simulating water, and I wouldn't be doing a very good blog job if I only told you about this FFT based one!
+There's actually quite a lot of algorithms for simulating water. One of the simplest is to treat the water surface like a grid. For each cell you store the height and vertical velocity so you can simulate the motion. To step time forward you just apply the velocity to the position as normal, then also feed the position back into the velocity (when the water level is high, it wants to accelerate back down, etc). This makes the water bob up and down, but to make the waves propagate you just average each cell with it's neighbors. This simple filtering method is pretty effective and very fast! To interact with the water, you just need to change the height or velocity. It does have it's issues though. For one, it's difficult to make framerate independent as the waves move the same amount each step. It also doesn't _quite_ move like water waves.
 
-# Scrolling Textures
+![Water ripples in Metroid Prime](images/waves/metroid-water.jpg)
+{: style="text-align: center"}
 
-Sometimes the best code is the code you didn't have to write, and so why not skip the simulation if you don't need it? Plenty of games have water that looks just great, but is just simple scrolling textures.
+Interactive water ripples in Metroid Prime
+{: style="text-align: center"}
 
-# Simple Filtering
+This is where fourier based water simulation comes in. It lets you use much fancier filtering without too much extra cost, and it even makes it pretty intuitive. Instead of treating the grid like just a bunch of locations that has waves in it somehow, it lets you treat a bunch of different waves like they exist in a grid somehow. This makes it easier to handle some of the unique characteristics that make water look like water. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves, and that gives water it's unique pulsing look as different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented this technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but a bit light on details perhaps. That's what I'd like to fill in with this article.
 
-Filtering is probably the easiest to implemnt. You treat the water as a uniform grid where each cell stores the vertical position and velocity. Then you do something like this:
+![Ocean waves in Assasin's Creed](images/waves/acbf-water.jpg)
+{: style="text-align: center"}
 
-```python
-cells = [.. an array of water cells]
-tmp = [... a temporary array of water cells]
+FFT based ocean in Assasin's Creed
+{: style="text-align: center"}
 
-foreach i in cells.count
-	# Make a weighted average with the neighboring cells to propagate the waves.
-	pos = (0.5*cells[i - 1].pos + cells[i].pos + 0.5*cells[i + 1].pos)/2
-	vel = (0.5*cells[i - 1].vel + cells[i].vel + 0.5*cells[i + 1].vel)/2
+At the other end of the spectrum, there is full blown fluid dynamics. Don't just approximate the water's surface. Treat it like a real fluid with volume. This produces the best looking water as waves can crest and fall over and splash, or can even flow across surfaces. Unsurprisingly, it's also the most expensive method as it adds an entire dimension to be simulated! While I've never implemented proper fluid dynamics myself, it really doesn't look all that hard. Ten Minute Physics recently posted a video on [implementing the FLIP algorithm](https://youtu.be/XmzBREkK8kY) in 2D. It looks rather fun! There's also a neat library for 2D fluid simulation using particles based on Box2D called [Liquid Fun](https://google.github.io/liquidfun/).
+
+## A Quick Water Wave Primer
+
+The first thing to know about waves (or almost any periodic motion) is that it's just energy that's stuck in a loop. In the case of water, it's energy bounces back between kinetic and potential energy. When the water is high, gravity pulls it down. It picks up speed and overshoots, going too far down. Then the pressure of the water around it pushes it back up. It overshoots again, and goes too high. Rinse and repeat. (pun intended) 
+
+![Wave cycle](images/waves/wave-cycle.svg)
+
+# A Simple Wave
+
+Let's start with a simple wave model: a sine wave. (I swear there will be very little trigonometry involved in this article) You'll probably remember that `sin(x)` gives you a nice wobbly line. If you want to animate it, you just need to change the phase using time: `sin(x + time)`. That produces a nice little animated wave like this one.
+
+<canvas id="simple-wave" style="border:solid 1px #0002;"></canvas>
+
+<script>
+(function(){
+	const canvas = document.getElementById("simple-wave")
+	canvas.width = canvas.parentElement.clientWidth
+	canvas.height = canvas.width/4
+	const ctx = canvas.getContext("2d")
 	
-	# Feed the position and velocity into one another to make the water bob.
-	tmp[i].pos = pos + 0.01*vel
-	tmp[i].vel = vel - 0.01*pos
+	let mfocus = false
+	canvas.onmouseenter = (e => mfocus = true)
+	canvas.onmouseleave = (e => mfocus = false)
+	
+	function animate(ms){
+		const t = -1e-3*ms
+		const n = 21
+		
+		ctx.save()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		
+		const scale = canvas.width/(n - 1)
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		// Draw axis
+		ctx.lineWidth = 1/scale
+		ctx.strokeStyle = "#888"
+		ctx.beginPath()
+		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0)
+		ctx.moveTo(0, -100); ctx.lineTo(0, +100)
+		ctx.stroke()
+		
+		// Draw velocity
+		ctx.strokeStyle = "#F002"
+		ctx.beginPath()
+		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.sin(i/2 + t))
+		ctx.stroke()
+		
+		// Draw wave
+		ctx.lineWidth = 3/scale
+		ctx.strokeStyle = "#0CF"
+		ctx.beginPath()
+		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.cos(i/2 + t))
+		ctx.stroke()
+		
+		
+		const y = 2*Math.cos(t), vy = Math.sin(t)
+		ctx.fillStyle = ctx.strokeStyle = "#F00"
+		ctx.lineWidth = 2/scale
+		
+		// Draw dot
+		ctx.beginPath()
+		ctx.arc(0, y, 8/scale, 0, 2*Math.PI)
+		ctx.fill()
+		
+		// Draw velocity line
+		ctx.beginPath()
+		ctx.moveTo(0, y); ctx.lineTo(0, y + vy)
+		ctx.stroke()
+		ctx.beginPath()
+		ctx.moveTo(0, y + vy + Math.sign(vy)*0.3)
+		ctx.lineTo(-0.15, y + vy)
+		ctx.lineTo(+0.15, y + vy)
+		ctx.fill()
 
-cells = tmp
-```
+		ctx.restore()
+		window.requestAnimationFrame(animate)
+	}
+	
+	animate(0)
+})()
+</script>
 
-That's pretty much it! There's a lot of room for variation too. For instance, you could store the current and previous position and use vertlet integration instead. You can also use a more complicated low pass filter than the simple weighted average to change the shapes of the waves, or how quickly they propagate. To interact with the water, you can kind of just modify the position or velocity directly and let things happen
+For reasons of simplicity the blue water line is actually `cos(x + time)`. That way we can plot the vertical velocity of the wave with `sin(x + time)`. It doesn't really matter, but setting it up this way lets you drop some pesky negative signs. Does this look like a water wave? Well... not really. For one, the shape is wrong. Real water waves have pointy peaks and flat troughs. The problem is that the water surface doesn't just move up and down. A better approximation is to move the surface around in circles. These are called [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) or gerstner waves.
 
-Other than it's simplicity, this method is also extremely fast. There were a number of games for the PS2/GC/Xbox era that looked like they probably used this method for interactive water waves. Implementing the effect in 3D scales very well too. You just need to sample more neighboring values or implement it as a separable filter.
+<canvas id="gerstner-wave" style="border:solid 1px #0002;"></canvas>
 
-The biggest downside with this method is that it doesn't really look all that realistic. Unlike light waves or soundwaves, waves on the surface of water don't all move at the same speed. Waves with longer wavelengths move faster. That's what causes water to have that pulsing look to it as the longer waves overtake shorter ones and cause them to crest as they add together.
-
-# Fourier Methods
-
-That's where the fourier methods step in, and what I'll be discussing in this article. Similar to the filtering method, you treat the water as a grid. Using an fast fourier transform you can convert the waves to a spectrum, move the different wavelength's phases forward by their corresponding speed, and then convert back to waves. If phases and fourier transforms sound intimidating, I hope to change your mind!
-
-This method will produce nicer looking waves than simple filtering, and is very flexible. You can also use it to animate purely procedural waves pretty easily. The downside is of course that FFTs are more expensive than simple filters that only need to sample a couple of neighbors.
-
-[Jump Trajectory](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) has a nice overview video about how they implemented this technique in Unity. It's an excellent video, but a bit light on details perhaps.
-
-# Computational Fluid Dynamics
-
-Lastly, if you want the ultimate in wavey realism then computational fluid dynamics is for you. Instead of just simulating the surface of the water, you simulate it all. This will simulate realistic splashes, cresting waves, and more. While I've never implemented CFD myself, it really doesn't look all that hard.  Ten Minute Physics recently posted a video on [implementing the FLIP algorithm](https://youtu.be/XmzBREkK8kY) in 2D. It looks rather fun! There's also a neat library for 2D fluid simulation using particles based on Box2D called [Liquid Fun](https://google.github.io/liquidfun/).
-
-## A Quick FFT Primer
+<script>
+(function(){
+	const canvas = document.getElementById("gerstner-wave")
+	canvas.width = canvas.parentElement.clientWidth
+	canvas.height = canvas.width/4
+	const ctx = canvas.getContext("2d")
+	
+	let foo = new IntersectionObserver(function(list){
+		list[0].intersectionRatio
+	})
+	foo.observe(canvas)
+	
+	let mfocus = false
+	canvas.onmouseenter = (e => mfocus = true)
+	canvas.onmouseleave = (e => mfocus = false)
+	
+	function animate(ms){
+		const t = -1e-3*ms
+		const n = 21
+		
+		ctx.save()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		
+		const scale = canvas.width/(n - 1)
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		// Draw wave
+		ctx.lineWidth = 3/scale
+		ctx.strokeStyle = "#0CF"
+		ctx.beginPath()
+		for(let i = -n; i < n; i++) ctx.lineTo(i - 1.5*Math.sin(i/2 + t), 1.5*Math.cos(i/2 + t))
+		ctx.stroke()
+		
+		// Draw circle
+		ctx.strokeStyle = "#F004"
+		ctx.lineWidth = 1/scale
+		ctx.beginPath()
+		ctx.arc(0, 0, 1.5, 0, 2*Math.PI)
+		ctx.stroke()
+		
+		// Draw dot
+		ctx.fillStyle = "#F00"
+		ctx.beginPath()
+		ctx.arc(-1.5*Math.sin(t), 1.5*Math.cos(t), 6/scale, 0, 2*Math.PI)
+		ctx.fill()
+		
+		ctx.restore()
+		window.requestAnimationFrame(animate)
+	}
+	
+	animate(0)
+})()
+</script>
