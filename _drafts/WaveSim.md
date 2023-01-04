@@ -22,6 +22,11 @@ Rendering and animating water are both pretty big topics, so this article is goi
 <canvas id="wavies" style="border:solid 1px #0002;"></canvas>
 
 <script>
+const AMPLITUDES = [
+	0.0, 0.4, 2.6, 3.2, 4.2, 1.5, 3.0, 1.5,
+	1.7, 1.2, 1.3, 0.6, 0.9, 0.4, 0.1, 0.4,
+];
+
 (function(){
 	const canvas = document.getElementById("wavies")
 	canvas.width = canvas.parentElement.clientWidth
@@ -42,14 +47,10 @@ Rendering and animating water are both pretty big topics, so this article is goi
 	
 	// Setup the waves with some initial frequencies in it.
 	const spectra = lifft_complex_arr(64)
-	const starting_spectra = [
-		0.00, 0.42, 2.68, 5.23, 7.21, 1.56, 7.05, 3.50,
-		2.79, 4.21, 3.33, 2.68, 1.98, 1.47, 1.11, 0.80,
-	]
-	for(let i = 0; i < starting_spectra.length; i++){
+	for(let i = 0; i < AMPLITUDES.length; i++){
 		const phase = 2*Math.PI*Math.random()
-		spectra.re[i] = starting_spectra[i]*Math.cos(phase)
-		spectra.im[i] = starting_spectra[i]*Math.sin(phase)
+		spectra.re[i] = AMPLITUDES[i]*Math.cos(phase)
+		spectra.im[i] = AMPLITUDES[i]*Math.sin(phase)
 	}
 	let waves = lifft_inverse_complex(spectra)
 	
@@ -87,7 +88,7 @@ Rendering and animating water are both pretty big topics, so this article is goi
 		// The first value is the water height, force it to stay at 0.
 		spectra_y.re[0] = spectra_y.im[0] = 0
 		
-		// Now iterate over the +/- frequency pairs and update their phases and amplitudes.
+		// Now iterate over the +/- frequency pairs and update their phases and AMPLITUDES.
 		for(let i = 0; i <= n/2; i++){
 			const phase = -dt*Math.sqrt(i)*Math.PI, mag = Math.exp(-dt*damping*i)
 			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
@@ -174,7 +175,7 @@ There's actually quite a lot of algorithms for simulating water. One of the simp
 Interactive water ripples in Metroid Prime
 {: style="text-align: center"}
 
-This is where fourier based water simulation comes in. It lets you use much fancier filtering without too much extra cost, and it even makes it pretty intuitive. Instead of treating the grid like just a bunch of locations that has waves in it somehow, it lets you treat a bunch of different waves like they exist in a grid somehow. This makes it easier to handle some of the unique characteristics that make water look like water. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves, and that gives water it's unique pulsing look as different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented this technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but a bit light on details perhaps. That's what I'd like to fill in with this article.
+This is where fourier based water simulation comes in using Fast Fourier Transforms, or FFTs. It lets you use much fancier filtering without too much extra cost, and it even makes it pretty intuitive. Instead of treating the grid like just a bunch of locations that has waves in it somehow, it lets you treat a bunch of different waves like they exist in a grid somehow. This makes it easier to handle some of the unique characteristics that make water look like water. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves, and that gives water it's unique pulsing look as different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented this technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but a bit light on details perhaps. That's what I'd like to fill in with this article.
 
 ![Ocean waves in Assasin's Creed](images/waves/acbf-water.jpg)
 {: style="text-align: center"}
@@ -209,7 +210,7 @@ Let's start with a simple wave model: a sine wave. (I swear there will be very l
 	
 	function animate(ms){
 		const t = -1e-3*ms
-		const n = 21
+		const n = 20
 		
 		ctx.save()
 		ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -267,7 +268,10 @@ Let's start with a simple wave model: a sine wave. (I swear there will be very l
 })()
 </script>
 
-For reasons of simplicity the blue water line is actually `cos(x + time)`. That way we can plot the vertical velocity of the wave with `sin(x + time)`. It doesn't really matter, but setting it up this way lets you drop some pesky negative signs. Does this look like a water wave? Well... not really. For one, the shape is wrong. Real water waves have pointy peaks and flat troughs. The problem is that the water surface doesn't just move up and down. A better approximation is to move the surface around in circles. These are called [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) or gerstner waves.
+A simple animated wave.
+{: style="text-align: center"}
+
+For reasons of simplicity the blue water line is actually `cos(x + time)`. That way we can plot the vertical velocity of the wave with `sin(x + time)`. It doesn't really matter, but setting it up this way lets you drop some pesky negative signs. Does this look like a water wave? Well... not really. For one, the shape is wrong. Real water waves have pointy peaks and flat troughs. The reason for this is because the surface of the water doesn't just move up and down, it actually moves in a circular shape. These are is called a [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) or gerstner waves. That's easy enough. If we add `cos(x + time)` to the wave's y position, then we just need to subtract `sin(x + time)` from the x position.
 
 <canvas id="gerstner-wave" style="border:solid 1px #0002;"></canvas>
 
@@ -289,7 +293,7 @@ For reasons of simplicity the blue water line is actually `cos(x + time)`. That 
 	
 	function animate(ms){
 		const t = -1e-3*ms
-		const n = 21
+		const n = 20
 		
 		ctx.save()
 		ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -325,3 +329,251 @@ For reasons of simplicity the blue water line is actually `cos(x + time)`. That 
 	animate(0)
 })()
 </script>
+
+A trochoidal or "gerstner" wave.
+{: style="text-align: center"}
+
+This is starting to look much better, though with one a single wave frequency mixed in in looks pretty boring as it simply scrolls from one side of the screen to the other. Something that makes water interesting is that longer waves actually travel faster than short waves. (Imagine how weird it would be if sound or light worked that way!) Specifically, a wave's speed is inversely proportional to the square root of it's wavelength. To demonstrate, let's plot a second red wave with 1/4x the wavelength moving 1/2x as fast. The math for this works out to be `cos(x*4 + sqrt(4)*t)`.
+
+<canvas id="two-waves" style="border:solid 1px #0002;"></canvas>
+
+<script>
+(function(){
+	const canvas = document.getElementById("two-waves")
+	canvas.width = canvas.parentElement.clientWidth
+	canvas.height = canvas.width/4
+	const ctx = canvas.getContext("2d")
+	
+	let foo = new IntersectionObserver(function(list){
+		list[0].intersectionRatio
+	})
+	foo.observe(canvas)
+	
+	let mfocus = false
+	canvas.onmouseenter = (e => mfocus = true)
+	canvas.onmouseleave = (e => mfocus = false)
+	
+	function animate(ms){
+		const t = -1e-3*ms
+		const n = 80
+		
+		ctx.save()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		
+		const scale = canvas.width/(n - 1)
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		// Draw long wave
+		ctx.lineWidth = 3/scale
+		ctx.strokeStyle = "#0CF"
+		ctx.beginPath()
+		for(let i = -n; i < n; i++) ctx.lineTo(i - 4*Math.sin(i/8 + t), 4*Math.cos(i/8 + t))
+		ctx.stroke()
+		
+		// Draw short wave
+		ctx.lineWidth = 2/scale
+		ctx.strokeStyle = "#F00"
+		ctx.beginPath()
+		for(let i = -n; i < n; i++) ctx.lineTo(i - 1*Math.sin(i/2 + Math.sqrt(4)*t), 1*Math.cos(i/2 + Math.sqrt(4)*t))
+		ctx.stroke()
+		
+		ctx.restore()
+		window.requestAnimationFrame(animate)
+	}
+	
+	animate(0)
+})()
+</script>
+
+Two waves with different wavelengths and speeds.
+{: style="text-align: center"}
+
+When plotted separately it looks... weird. It did not seem intuitive to me that the wave speeds could vary that much, but I was wrong! That's what gives water it's pulsating look as the peaks of the waves mix together when moving past one another. Just look at how watery the next wave looks when mixing the two wave offsets together and speeding time up to a normal amount. Lovely!
+
+<canvas id="double-wave" style="border:solid 1px #0002;"></canvas>
+
+<script>
+(function(){
+	const canvas = document.getElementById("double-wave")
+	canvas.width = canvas.parentElement.clientWidth
+	canvas.height = canvas.width/4
+	const ctx = canvas.getContext("2d")
+	
+	let foo = new IntersectionObserver(function(list){
+		list[0].intersectionRatio
+	})
+	foo.observe(canvas)
+	
+	let mfocus = false
+	canvas.onmouseenter = (e => mfocus = true)
+	canvas.onmouseleave = (e => mfocus = false)
+	
+	function animate(ms){
+		const t = -4e-3*ms
+		const n = 80
+		
+		ctx.save()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		
+		const scale = canvas.width/(n - 1)
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		// Draw long wave
+		ctx.lineWidth = 3/scale
+		ctx.strokeStyle = "#0CF"
+		ctx.beginPath()
+		for(let i = -n; i < n; i++){
+			let x = i, y = 0
+			x -= 3*Math.sin(i/8 + t) + 0.5*Math.sin(i/2 + Math.sqrt(4)*t)
+			y += 3*Math.cos(i/8 + t) + 0.5*Math.cos(i/2 + Math.sqrt(4)*t)
+			ctx.lineTo(x, y)
+		}
+		ctx.stroke()
+		
+		ctx.restore()
+		window.requestAnimationFrame(animate)
+	}
+	
+	animate(0)
+})()
+</script>
+
+Two waves mixed together.
+{: style="text-align: center"}
+
+Mixing two waves looks so nice, you'd be correct to think that mixing more waves would make it look even better. The problem is how many do you need to mix? For each additional wave you need to calculate a whole lot more sines and cosines. Lets not even mention the 3D case where you might find yourself calculating a whole grid of wave directions for each wave for each grid point. Vertex shaders are fast, but not that fast! Also, wasn't this supposed to be an article about interactive water? How on earth do you interact with sine waves!?
+
+## Mix All the Waves!
+
+Since you already know that this article is about using the FFT to simulate water, perhaps you won't be surprised when I reveal that the FFT is the magical algorithm that can calculate 10's of thousands of sines and cosines without the cost. Even better, you don't really even need to know much about trigonometry. If you followed along with the scrolling sine waves above, you should be able to understand the rest of the article.
+
+# The FFT Algorithm
+
+The Fast Fourier Transform is an algorithm that can take a grid of N numbers that describe the water's surface (height and velocity), and turns it into a complete list of N sines and cosines for all the various sized waves present. It's companion, the inverse FFT, can take a list of sines and cosines and turn it back into the height and velocity. As it's name suggests, it's very fast. How the FFT works is beyond the scope of this article, but you should be able to find an FFT library for basically any programming language.
+
+The FFT has a couple of quirks. First, it treats it's input as if it's repeating. This is extremely handy if you want a result that is tileable. If you don't, then you'll need to leave some dead space at the edges where you can clamp the waves down to zero to prevent them from wrapping around. Another quirk is that the size of the input has to be a power of two (2, 4, 8, 16, etc). It's possible to work around that, but it's much easier to just work with the limitation.
+
+The input and output of the FFT is fairly straightforward too once you see the pattern. It does use complex numbers, but don't worry if that gives you dread. The scrolling waves above already used them, and that's kinda all you need to know. Complex numbers have a "real" and "imaginary" part that are like the x and y parts of a 2D vector. For example, say you had a list of just 8 points that made up your water's surface. Using the FFT would look something like this:
+
+```python
+# The input is 8 complex numbers
+water_input = [
+	complex_number(height[0], velocity[0]),
+	complex_number(height[1], velocity[1]),
+	...
+	complex_number(height[7], velocity[7]),
+]
+
+wave_output = fft(water_input)
+
+# The output is the same number of complex numbers.
+wave_output[0] # The average height/velocity of the water
+wave_output[1] # The wave that has length grid_size/1
+wave_output[2] # The wave that has length grid_size/2
+wave_output[3] # The wave that has length grid_size/3
+wave_output[4] # The wave that has length grid_size/4
+wave_output[5] # The wave that has length grid_size/3, but moves backwards
+wave_output[6] # The wave that has length grid_size/2, but moves backwards
+wave_output[7] # The wave that has length grid_size/1, but moves backwards
+```
+
+The output numbers are also complex numbers, they represent the sines and cosines of the waves. Think of it like a 2D vector again. The length of the vector is the wave's amplitude, and the angle it points in is the wave's phase.
+
+To use the FFT in 3D, you would apply it to the rows of the grid first. Then apply it to the columns. It might seem weird to apply the FFT to the columns when they already contain wave information, but the FFT is magical like that.
+
+Finally, the inverse FFT is the exact opposite. You give it a list of N complex numbers describing the waves, and it gives you back N numbers with the height and velocity of each wave.
+
+# Animating Water with the FFT
+
+Enough explanations! We already know how to make waves by animating some sines and cosines, and we have a magic algorithm that can calculate a lot of sines and cosines efficiently. Lets put the two together and animate some waves!
+
+<canvas id="fft-waves" style="border:solid 1px #0002;"></canvas>
+
+<script>
+(function(){
+	const canvas = document.getElementById("fft-waves")
+	canvas.width = canvas.parentElement.clientWidth
+	canvas.height = canvas.width/4
+	const ctx = canvas.getContext("2d")
+	
+	// Setup the waves with some initial frequencies in it.
+	const spectra = lifft_complex_arr(64)
+	for(let i = 0; i < AMPLITUDES.length; i++){
+		const phase = 2*Math.PI*Math.random()
+		spectra.re[i] = AMPLITUDES[i]*Math.cos(phase)
+		spectra.im[i] = AMPLITUDES[i]*Math.sin(phase)
+	}
+	
+	function animate(ms){
+		const t = 1e-3*ms
+		const spectra_y = lifft_complex_arr(64)
+		for(let i = 0; i < spectra.n/2; i++){
+			const phase = -t*Math.sqrt(i)*Math.PI
+			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
+			
+			p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
+			spectra_y.re[i] = p.re
+			spectra_y.im[i] = p.im
+		}
+		const water_y = lifft_inverse_complex(spectra_y)
+		
+		ctx.save()
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		
+		const scale = canvas.width/(water_y.n - 1)
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
+		ctx.lineCap = ctx.lineJoin = "round"
+		
+		ctx.beginPath()
+		for(let i = 0; i < water_y.n; i++){
+			ctx.lineTo(i - 1.0*water_y.im[i], water_y.re[i])
+		}
+		ctx.lineWidth = 3/scale
+		ctx.strokeStyle = "#0CF"
+		ctx.stroke()
+
+		ctx.restore()
+		window.requestAnimationFrame(animate)
+	}
+	
+	animate(0)
+})()
+</script>
+
+Many waves mixed together with an FFT.
+{: style="text-align: center"}
+
+That looks pretty good to my eyes. With all the wavefronts passing one another it looks almost random, but yet it's _entirely_ predcitable. The waves that make up the water always have the same amplitude, and only their phase is shifted to the current time using the same method as the simpler waves. The only difference is now there are over a dozen waves instead of just two. Lets look at some psuedo-code:
+
+```python
+# Amplitudes of the various waves at start
+# I kinda just made these up favoring longer wavelengths.
+AMPLITUDES = [...]
+
+# Calculate the starting waves.
+# I use the amplitudes with a random phase.
+# The random phose prevents them from all lining up at start.
+WAVES = complex_array_with_length(64)
+for i in 0 to WAVES.length:
+	amp, phase = AMPLITUDES[i], 2*PI*random()
+	WAVES[i] = complex_number(amp*cos(phase), amp*sin(phase))
+
+def update_water(time):
+	# Make a copy of the waves with new phases.
+	waves = complex_array_with_length(WAVES.length)
+	for i in 0 to WAVES.length/2:
+		# Calculate the phase for like we did with sines/cosines.
+		const phase = -t*sqrt(i)
+		# Make a complex number with the phase angle we want.
+		const w = complex_number(cos(phase), sin(phase));
+		# Complex multiplication adds the phase angles.
+		waves[i] = complex_multiply(w, WAVES[i])
+	
+	# All of the waves are ready. Do all the sines/cosines!
+	water = fft_inverse(waves)
+	return water
+```
+
+That's pretty much all you have to do. 
