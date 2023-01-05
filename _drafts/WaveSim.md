@@ -225,7 +225,7 @@ At the other end of the spectrum, there is full blown fluid dynamics. Don't just
 
 ## A Quick Water Wave Primer
 
-The first thing to know about waves (or almost any periodic motion) is that it's just energy that's stuck in a loop. In the case of water, it's energy bounces back between kinetic and potential energy. When the water is high, gravity pulls it down. It picks up speed and overshoots, going too far down. Then the pressure of the water around it pushes it back up. It overshoots again, and goes too high. Rinse and repeat. (pun intended) 
+The first thing to know about waves (or almost any periodic motion) is that it's just energy that's stuck in a loop. In the case of water, it's energy bounces back between kinetic and potential energy. When the water is high, gravity pulls it down. It picks up speed and overshoots, going too far down. Then the pressure of the water around it pushes it back up. It overshoots again, and goes too high. Rinse and repeat. (pun intended)
 
 ![Wave cycle](images/waves/wave-cycle.svg)
 
@@ -234,6 +234,9 @@ The first thing to know about waves (or almost any periodic motion) is that it's
 Let's start with a simple wave model: a sine wave. (I swear there will be very little trigonometry involved in this article) You'll probably remember that `sin(x)` gives you a nice wobbly line. If you want to animate it, you just need to change the phase using time: `sin(x - time)`. That produces a nice little animated wave like this one.
 
 <canvas id="simple-wave" style="border:solid 1px #0002;"></canvas>
+
+A simple animated wave.
+{: style="text-align: center"}
 
 <script>'use strict';
 new Widget("simple-wave", widget => {
@@ -297,29 +300,26 @@ new Widget("simple-wave", widget => {
 })
 </script>
 
-A simple animated wave.
-{: style="text-align: center"}
-
 For reasons of simplicity the blue water line is actually `cos(x - time)`. That way we can plot the vertical velocity of the wave with `sin(x - time)`. It doesn't really matter, but setting it up this way lets you drop some pesky negative signs. Does this look like a water wave? Well... not really. For one, the shape is wrong. Real water waves have pointy peaks and flat troughs. The reason for this is because the surface of the water doesn't just move up and down, it actually moves in a circular shape. These are is called a [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) or gerstner waves. That's easy enough. If we add `cos(x - time)` to the wave's y position, then we just need to subtract `sin(x - time)` from the x position.
 
 # A Better Wave
 
-<canvas id="gerstner-wave" style="border:solid 1px #0002;"></canvas>
+<canvas id="better-wave" style="border:solid 1px #0002;"></canvas>
 <div style="display:flex; align-items:center; column-gap:1em">
 	<label>Example:</label>
 	<select id="example-select">
 		<option value="trochoidal">Trochoidal Wave</option>
 		<option value="sine">Sine Wave</option>
 	</select>
-	<label>Wavelength:</label> <input type="range" value="-0.5" min="-1.5" max="0.5" step="0.01" id="wavelength"/>
+	<label>Wavelength:</label> <input type="range" value="-0.5" min="-1.5" max="0.5" step="0.01" id="better-wave-wavelength"/>
 	<label>Amplitude:</label> <input type="range" value="1" min="0" max="2" step="0.01" id="amplitude"/>
 </div>
 
-<textarea id="code-area" rows="5" style="width:100%; font-size:125%"></textarea>
-<pre id="code-error" hidden="true"></pre>
+<textarea id="better-wave-code" rows="5" style="width:100%; font-size:125%" spellcheck="false"></textarea>
+<pre id="better-wave-error" hidden="true"></pre>
 
 <script>'use strict';
-new Widget("gerstner-wave", widget => {
+new Widget("better-wave", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
@@ -338,7 +338,7 @@ new Widget("gerstner-wave", widget => {
 		return Function(
 			"x", "time", "amplitude", "wavelength",
 			`'use strict';
-				const sin = Math.sin, cos = Math.cos
+				const {sin, cos, sqrt} = Math;
 				let x_out = x, y_out = 0;
 				${code};
 				return [x_out, y_out];
@@ -346,19 +346,12 @@ new Widget("gerstner-wave", widget => {
 		)
 	}
 	
-	const code_area = document.getElementById("code-area")
+	const code_area = document.getElementById("better-wave-code")
 	code_area.value = EXAMPLE.trochoidal
-	
-	const example = document.getElementById("example-select")
-	example.value = "trochoidal"
-	example.oninput = (e => {
-		code_area.value = EXAMPLE[example.value]
-		code_area.oninput()
-	})
 	
 	let func = compile(code_area.value)
 	code_area.oninput = (e => {
-		const output = document.getElementById("code-error")
+		const output = document.getElementById("better-wave-error")
 		try {
 			const f = compile(code_area.value)
 			f(0, 0, 1, 1)
@@ -371,7 +364,14 @@ new Widget("gerstner-wave", widget => {
 		}
 	})
 	
-	const wavelength_slider = document.getElementById("wavelength")
+	const example = document.getElementById("example-select")
+	example.value = "trochoidal"
+	example.oninput = (e => {
+		code_area.value = EXAMPLE[example.value]
+		code_area.oninput()
+	})
+	
+	const wavelength_slider = document.getElementById("better-wave-wavelength")
 	const amplitude_slider = document.getElementById("amplitude")
 	
 	return function(t){
@@ -408,7 +408,6 @@ new Widget("gerstner-wave", widget => {
 			ctx.lineTo(x, y)
 		}
 		ctx.stroke()
-		
 		
 		const [x0, y0] = func(0, t, amplitude, wavelength)
 		
@@ -461,18 +460,57 @@ new Widget("two-waves", widget => {
 })
 </script>
 
-Two waves with different wavelengths and speeds.
-{: style="text-align: center"}
-
 When plotted separately it looks... weird. It did not seem intuitive to me that the wave speeds could vary that much, but I was wrong! That's what gives water it's pulsating look as the peaks of the waves mix together when moving past one another. Just look at how watery the next wave looks when mixing the two wave offsets together and speeding time up to a normal amount. Lovely!
 
-<canvas id="double-wave" style="border:solid 1px #0002;"></canvas>
+<canvas id="mixed-waves" style="border:solid 1px #0002;"></canvas>
+
+<textarea id="two-wave-code" rows="10" style="width:100%; font-size:125%" spellcheck="false">
+time *= 10; // Speed up time a bit
+x_out = x, y_out = 0;
+
+let amp0 = 3.0, len0 = 8;
+x_out -= amp0*Math.sin(x/len0 - time/sqrt(len0));
+y_out += amp0*Math.cos(x/len0 - time/sqrt(len0));
+
+let amp1 = 0.5, len1 = 2;
+x_out -= amp1*Math.sin(x/len1 - time/sqrt(len1));
+y_out += amp1*Math.cos(x/len1 - time/sqrt(len1));
+</textarea>
+<pre id="two-wave-error" hidden="true"></pre>
 
 <script>'use strict';
-new Widget("double-wave", widget => {
+new Widget("mixed-waves", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
+	function compile(code){
+		return Function(
+			"x", "time",
+			`'use strict';
+				const {sin, cos, sqrt} = Math;
+				let x_out = x, y_out = 0;
+				${code};
+				return [x_out, y_out];
+			`
+		)
+	}
+
+	const code_area = document.getElementById("two-wave-code")
+	let func = compile(code_area.value)
+	code_area.oninput = (e => {
+		const output = document.getElementById("two-wave-error")
+		try {
+			const f = compile(code_area.value)
+			f(0, 0)
+			func = f
+			output.hidden = true
+		} catch(err) {
+			console.error(err)
+			output.hidden = false
+			output.textContent = err
+		}
+	})
+
 	return function(t){
 		const n = 80, scale = canvas.width/(n - 1)
 		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
@@ -483,18 +521,13 @@ new Widget("double-wave", widget => {
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
 		for(let i = -n; i < n; i++){
-			let x = i, y = 0
-			x -= 3*Math.sin(i/8 - 3*t) + 0.5*Math.sin(i/2 - Math.sqrt(4)*3*t)
-			y += 3*Math.cos(i/8 - 3*t) + 0.5*Math.cos(i/2 - Math.sqrt(4)*3*t)
+			let [x, y] = func(i, t)
 			ctx.lineTo(x, y)
 		}
 		ctx.stroke()
 	}
 })
 </script>
-
-Two waves mixed together.
-{: style="text-align: center"}
 
 Mixing two waves looks so nice, you'd be correct to think that mixing more waves would make it look even better. The problem is how many do you need to mix? For each additional wave you need to calculate a whole lot more sines and cosines. Lets not even mention the 3D case where you might find yourself calculating a whole grid of wave directions for each wave for each grid point. Vertex shaders are fast, but not that fast! Also, wasn't this supposed to be an article about interactive water? How on earth do you interact with sine waves!?
 
@@ -544,6 +577,9 @@ Enough explanations! We already know how to make waves by animating some sines a
 
 <canvas id="fft-waves" style="border:solid 1px #0002;"></canvas>
 
+Many waves mixed together with an FFT.
+{: style="text-align: center"}
+
 <script>'use strict';
 new Widget("fft-waves", widget => {
 	const {canvas, ctx} = widget
@@ -563,7 +599,7 @@ new Widget("fft-waves", widget => {
 			const phase = -t*Math.sqrt(i)*Math.PI
 			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
 			
-			p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
+			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
 			spectra_y.re[i] = p.re
 			spectra_y.im[i] = p.im
 		}
@@ -583,9 +619,6 @@ new Widget("fft-waves", widget => {
 	}
 })
 </script>
-
-Many waves mixed together with an FFT.
-{: style="text-align: center"}
 
 That looks pretty good to my eyes. With all the wavefronts passing one another it looks almost random, but yet it's _entirely_ predcitable. The waves that make up the water always have the same amplitude, and only their phase is shifted to the current time using the same method as the simpler waves from earlier. The only difference is now there are over a dozen waves instead of just two. Lets look at some psuedo-code:
 
@@ -637,7 +670,7 @@ new Widget("broken-waves", widget => {
 			const phase = -t*Math.sqrt(i)*Math.PI
 			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
 			
-			p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
+			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
 			spectra_y.re[i] = p.re
 			spectra_y.im[i] = p.im
 		}
