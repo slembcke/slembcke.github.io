@@ -593,7 +593,7 @@ Finally, the inverse FFT is the exact opposite. You give it a list of N complex 
 
 Enough explanations! We already know how to make waves by animating some sines and cosines, and we have a magic algorithm that can calculate a lot of sines and cosines efficiently. Lets put the two together and animate some waves!
 
-<canvas id="fft-waves" style="border:solid 1px #0002;"></canvas>
+<canvas id="fft1-waves" style="border:solid 1px #0002;"></canvas>
 
 <textarea id="fft1-code" rows="8" style="width:100%; font-size:125%" spellcheck="false">
 for(let i = 0; i < waves.n; i++){
@@ -606,32 +606,32 @@ water = inverse_fft(waves)
 <pre id="fft1-error" hidden="true"></pre>
 
 <script>'use strict';
-new Widget("fft-waves", widget => {
+const COMPLEX_ARRAY_PROXY = {
+	get: (arr, idx) => arr[idx] || lifft_complex(arr.re[idx], arr.im[idx]),
+	set: (arr, idx, val) => {
+		arr.re[idx] = val.re
+		arr.im[idx] = val.im
+		return true
+	},
+};
+
+const SPECTRA = lifft_complex_arr(64), phases = []
+for(let i = 0; i < SPECTRA.n; i++){
+	SPECTRA.re[i] = AMPLITUDES[i] || 0
+	phases[i] = 2*Math.PI*Math.random()
+}
+
+new Widget("fft1-waves", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
-	const SPECTRA = lifft_complex_arr(64), phases = []
-	for(let i = 0; i < SPECTRA.n; i++){
-		SPECTRA.re[i] = AMPLITUDES[i] || 0
-		phases[i] = 2*Math.PI*Math.random()
-	}
-	
-	const spectra = lifft_complex_arr(64)
-	const waves = new Proxy(spectra, {
-		get: (arr, idx) => arr[idx] || lifft_complex(arr.re[idx], arr.im[idx]),
-		set: (arr, idx, val) => {
-			arr.re[idx] = val.re
-			arr.im[idx] = val.im
-			return true
-		},
-	})
-	
 	function compile(code){
 		return Function(
-			"time", "waves",
+			"time", "_spectra",
 			`'use strict';
 				const {cos, sin, sqrt} = Math
 				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
+				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
 				let water
 				${code}
 				return water
@@ -657,14 +657,15 @@ new Widget("fft-waves", widget => {
 	
 	return function(t){
 		// Init spectra with SPECTRA*phases.
+		const spectra = lifft_complex_arr(64)
 		for(let i = 0; i < SPECTRA.n; i++){
-				const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
-				const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
-				spectra.re[i] = p.re
-				spectra.im[i] = p.im
+			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
+			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
+			spectra.re[i] = p.re
+			spectra.im[i] = p.im
 		}
 		
-		const water = func(4*t, waves)
+		const water = func(4*t, spectra)
 		
 		const scale = canvas.width/(water.n - 1)
 		
@@ -678,7 +679,7 @@ new Widget("fft-waves", widget => {
 		
 		for(let i = 0; i < SPECTRA.n; i++){
 			ctx.fillStyle = i == mi ? "#0F04" : "#0002"
-			ctx.fillRect(i, 0, 0.9, i*SPECTRA.re[i]);
+			ctx.fillRect(i, 0, 0.9, (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))*SPECTRA.re[i]);
 		}
 		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
@@ -707,85 +708,112 @@ That looks pretty good to my eyes. With all the wavefronts passing one another i
 
 TODO Waves moving backwards are broken though
 
-<canvas id="broken-waves" style="border:solid 1px #0002;"></canvas>
+<canvas id="fft2-waves" style="border:solid 1px #0002;"></canvas>
+
+<textarea id="fft2-code" rows="16" style="width:100%; font-size:125%" spellcheck="false">
+for(let i = 0; i <= waves.n/2; i++){
+  let phase = -time*sqrt(i)
+  let phase_complex = complex(cos(phase), sin(phase));
+  
+  let p = complex_multiply(phase_complex, waves[i]);
+  waves_x[i] = complex(-p.im, p.re);
+  waves_y[i] = p;
+  
+  let j = (waves.n - i) % waves.n
+  let q = complex_multiply(phase_complex, waves[j])
+  waves_x[j] = complex(q.im, -q.re)
+  waves_y[j] = q
+}
+water_x = inverse_fft(waves_x)
+water_y = inverse_fft(waves_y)
+</textarea>
+<pre id="fft2-error" hidden="true"></pre>
 
 <script>'use strict';
-new Widget("broken-waves", widget => {
+new Widget("fft2-waves", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
-	// Setup the waves with some initial frequencies in it.
-	const spectra = lifft_complex_arr(64)
-	spectra.re[64 - 4] = 10
 	
-	return function(t){
-		const spectra_y = lifft_complex_arr(64)
-		for(let i = 0; i < spectra.n; i++){
-			const phase = -t*Math.sqrt(i)*Math.PI
-			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
-			
-			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
-			spectra_y.re[i] = p.re
-			spectra_y.im[i] = p.im
-		}
-		const water_y = lifft_inverse_complex(spectra_y)
-		
-		const scale = canvas.width/(water_y.n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
-		
-		ctx.beginPath()
-		for(let i = 0; i < water_y.n; i++){
-			ctx.lineTo(i - 1.0*water_y.im[i], water_y.re[i])
-		}
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.stroke()
+	function compile(code){
+		return Function(
+			"time", "_spectra",
+			`'use strict';
+				const {cos, sin, sqrt} = Math
+				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
+				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
+				const waves_x = new Proxy(lifft_complex_arr(waves.n), COMPLEX_ARRAY_PROXY)
+				const waves_y = new Proxy(lifft_complex_arr(waves.n), COMPLEX_ARRAY_PROXY)
+				let water_x, water_y
+				${code}
+				return [water_x, water_y]
+			`
+		)
 	}
-})
-</script>
 
-TODO Changing the math to fix backwards waves
-
-<canvas id="backwards-waves" style="border:solid 1px #0002;"></canvas>
-
-<script>'use strict';
-new Widget("backwards-waves", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
-	
-	// Setup the waves with some initial frequencies in it.
-	const spectra = lifft_complex_arr(64)
-	spectra.re[64 - 4] = 10
+	const code_area = document.getElementById("fft2-code")
+	let func = compile(code_area.value)
+	code_area.oninput = (e => {
+		const output = document.getElementById("fft2-error")
+		try {
+			const f = compile(code_area.value)
+			f(0, waves)
+			func = f
+			output.hidden = true
+		} catch(err) {
+			console.error(err)
+			output.hidden = false
+			output.textContent = err
+		}
+	})
 	
 	return function(t){
-		const spectra_x = lifft_complex_arr(64)
-		const spectra_y = lifft_complex_arr(64)
-		for(let i = 0; i < spectra.n/2; i++){
-			const phase = -t*Math.sqrt(i)*Math.PI
-			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
-			
-			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
-			spectra_x.re[i] = -p.im, spectra_x.im[i] = +p.re
-			spectra_y.re[i] = +p.re, spectra_y.im[i] = +p.im
-			
-			const j = -i & (spectra.n - 1)
-			const q = lifft_cmul(w, lifft_complex(spectra.re[j], spectra.im[j]))
-			spectra_x.re[j] = +q.im, spectra_x.im[j] = -q.re
-			spectra_y.re[j] = +q.re, spectra_y.im[j] = +q.im
+		// Init spectra with SPECTRA*phases.
+		const spectra = lifft_complex_arr(64)
+		for(let i = 0; i < SPECTRA.n; i++){
+			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
+			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
+			const j = -i & (SPECTRA.n - 1)
+			spectra.re[j] = p.re
+			spectra.im[j] = p.im
 		}
-		const water_x = lifft_inverse_complex(spectra_x)
-		const water_y = lifft_inverse_complex(spectra_y)
 		
-		const scale = canvas.width/(water_y.n - 1)
+		const [water_x, water_y] = func(4*t, spectra)
+		
+		const scale = canvas.width/(spectra.n - 1)
+		
+		ctx.setTransform(canvas.width/spectra.n, 0, 0, -5, 0, canvas.height)
+		const {x:mx, y:my} = widget.mlocal
+		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
+		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
+		
+		if(widget.mleft) SPECTRA.re[-mi & (SPECTRA.n - 1)] = my/Math.abs(mi_signed)
+		if(widget.mright) SPECTRA.re[-mi & (SPECTRA.n - 1)] = 0
+		
+		for(let i = 0; i < SPECTRA.n; i++){
+			const j = -i & (SPECTRA.n - 1)
+			ctx.fillStyle = j == mi ? "#0F04" : "#0002"
+			ctx.fillRect(j, 0, 0.9, (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))*SPECTRA.re[i]);
+		}
+		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
 		ctx.lineCap = ctx.lineJoin = "round"
 		
 		ctx.lineWidth = 3/scale
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
-		for(let i = 0; i < water_y.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i])
+		for(let i = 0; i < spectra.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i])
 		ctx.stroke()
+		
+		ctx.fillStyle = "#0008"
+		ctx.textAlign = "center"
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height)
+		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0)
+		
+		if(widget.mfocus){
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height)
+			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0)
+		}
 	}
 })
 </script>
