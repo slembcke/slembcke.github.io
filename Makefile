@@ -1,3 +1,5 @@
+default: serve
+
 update:
 	bundler install
 
@@ -18,7 +20,3 @@ review:
 
 publish:
 	git push origin master:published
-
-.PHONY: update clean temp serve review publish
-
-# --future
