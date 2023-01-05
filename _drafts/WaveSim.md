@@ -632,7 +632,7 @@ new Widget("fft1-waves", widget => {
 				const {cos, sin, sqrt} = Math
 				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
 				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
-				let water
+				let water = lifft_complex_arr(_spectra.n)
 				${code}
 				return water
 			`
@@ -645,7 +645,7 @@ new Widget("fft1-waves", widget => {
 		const output = document.getElementById("fft1-error")
 		try {
 			const f = compile(code_area.value)
-			f(0, waves)
+			f(0, lifft_complex_arr(SPECTRA.n))
 			func = f
 			output.hidden = true
 		} catch(err) {
@@ -657,7 +657,7 @@ new Widget("fft1-waves", widget => {
 	
 	return function(t){
 		// Init spectra with SPECTRA*phases.
-		const spectra = lifft_complex_arr(64)
+		const spectra = lifft_complex_arr(SPECTRA.n)
 		for(let i = 0; i < SPECTRA.n; i++){
 			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
 			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
@@ -742,9 +742,10 @@ new Widget("fft2-waves", widget => {
 				const {cos, sin, sqrt} = Math
 				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
 				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
-				const waves_x = new Proxy(lifft_complex_arr(waves.n), COMPLEX_ARRAY_PROXY)
-				const waves_y = new Proxy(lifft_complex_arr(waves.n), COMPLEX_ARRAY_PROXY)
-				let water_x, water_y
+				const waves_x = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
+				const waves_y = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
+				let water_x = lifft_complex_arr(_spectra.n)
+				let water_y = lifft_complex_arr(_spectra.n)
 				${code}
 				return [water_x, water_y]
 			`
@@ -757,7 +758,7 @@ new Widget("fft2-waves", widget => {
 		const output = document.getElementById("fft2-error")
 		try {
 			const f = compile(code_area.value)
-			f(0, waves)
+			f(0, lifft_complex_arr(SPECTRA.n))
 			func = f
 			output.hidden = true
 		} catch(err) {
@@ -769,7 +770,7 @@ new Widget("fft2-waves", widget => {
 	
 	return function(t){
 		// Init spectra with SPECTRA*phases.
-		const spectra = lifft_complex_arr(64)
+		const spectra = lifft_complex_arr(SPECTRA.n)
 		for(let i = 0; i < SPECTRA.n; i++){
 			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
 			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
