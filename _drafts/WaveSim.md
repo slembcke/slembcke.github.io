@@ -589,6 +589,125 @@ To use the FFT in 3D, you would apply it to the rows of the grid first. Then app
 
 Finally, the inverse FFT is the exact opposite. You give it a list of N complex numbers describing the waves, and it gives you back N numbers with the height and velocity of each wave. No surprises.
 
+<canvas id="fft-io" style="border:solid 1px #0002;"></canvas>
+
+<script>'use strict';
+new Widget("fft-io", widget => {
+	const {canvas, ctx} = widget
+	canvas.height = canvas.width/2
+	
+	const N = 16
+	let input, output = lifft_complex_arr(N)
+	function calc_input(){input = lifft_inverse_complex(output)}
+	function calc_output(){output = lifft_forward_complex(input)}
+	
+	output.im[1] = -1
+	calc_input()
+	
+	function draw_bars(x, y, centered, f){
+		let scale = 70, min, max
+		if(centered){
+			ctx.setTransform(15, 0, 0, -scale, x*canvas.width, y*canvas.height)
+			min = -1, max = 1
+		} else {
+			ctx.setTransform(15, 0, 0, -2*scale, x*canvas.width, y*canvas.height + scale)
+			scale *= 2, min = 0, max = 1
+		}
+		
+		ctx.fillStyle = "#DDD"
+		for(let i = 0; i < N; i++) ctx.fillRect(i - N/2, min, 0.9, max - min)
+		
+		ctx.fillStyle = "#08C"
+		for(let i = 0; i < N; i++){
+			const value = Math.max(min, Math.min(f(i), max))
+			ctx.fillRect(i - N/2, 0, 0.9, value)
+		}
+		
+		ctx.strokeStyle = "#000"
+		ctx.lineWidth = 1/scale
+		ctx.beginPath()
+		ctx.lineTo(-N/2, 0)
+		ctx.lineTo(+N/2, 0)
+		ctx.stroke()
+	}
+	
+	function mouse_input(min, f){
+		const {x, y} = widget.mlocal
+		if(-N/2 < x && x < N/2 && min < y && y < 1){
+			const mi = Math.floor(x + N/2)
+			if(widget.mleft) f(mi, y)
+			if(widget.mright) f(mi, 0)
+		}
+	}
+	
+	function get_abs(arr, i){return Math.hypot(arr.re[i], arr.im[i])}
+	function set_abs(arr, i, v){
+		const abs = get_abs(arr, i)
+		if(abs > 0){
+			const coef = v/(get_abs(arr, i) + Number.MIN_VALUE)
+			arr.re[i] *= coef
+			arr.im[i] *= coef
+		} else {
+			arr.re[i] = v
+		}
+	}
+	
+	function get_arg(arr, i){return Math.atan2(arr.im[i], arr.re[i])/Math.PI}
+	function set_arg(arr, i, v){
+		const abs = get_abs(arr, i)
+		arr.re[i] = abs*Math.cos(v*Math.PI)
+		arr.im[i] = abs*Math.sin(v*Math.PI)
+	}
+	
+	return function(t){
+		draw_bars(0.2, 0.25, true, i => 2*input.re[i])
+		mouse_input(-1, (i, v) => {input.re[i] = v/2; calc_output()})
+		draw_bars(0.2, 0.75, true, i => 2*input.im[i])
+		mouse_input(-1, (i, v) => {input.im[i] = v/2; calc_output()})
+		
+		draw_bars(0.8, 0.25, false, i => get_abs(output, i))
+		mouse_input(0, (i, v) => {set_abs(output, i, v); calc_input()})
+		draw_bars(0.8, 0.75, true, i => get_arg(output, i))
+		mouse_input(-1, (i, v) => {set_arg(output, i, v); calc_input()})
+		
+		{
+			ctx.textAlign = "center"
+			ctx.textBaseline = "middle"
+			ctx.fillStyle = "#000"
+			
+			ctx.setTransform(1, 0, 0, 1, 0.5*canvas.width, 0.5*canvas.height)
+			ctx.lineWidth = 1
+			ctx.strokeStyle = "#000"
+			const w = 190, h = 100
+			ctx.strokeRect(-w/2, -h/2, w, h)
+			
+			const scale = 2
+			ctx.transform(scale, 0, 0, scale, 0, 0)
+			ctx.strokeRect(0.5*(canvas.width - w), 0.5*(canvas.height - h), w, h)
+			
+			ctx.fillText("fft() -->", 0, -10)
+			ctx.fillText("<-- fft_inverse()", 0, 10)
+			
+			ctx.setTransform(scale, 0, 0, scale, 0.2*canvas.width, 0.5*canvas.height)
+			ctx.fillText("Water Surface (x)", 0, 0)
+			
+			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.25*canvas.height)
+			ctx.fillText("Height (y)", 0, 0)
+			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.75*canvas.height)
+			ctx.fillText("Velocity (y)", 0, 0)
+			
+			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.25*canvas.height)
+			ctx.fillText("Amplitude", 0, 0)
+			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.75*canvas.height)
+			ctx.fillText("Phase Angle", 0, 0)
+			
+			ctx.setTransform(scale, 0, 0, scale, 0.8*canvas.width, 0.5*canvas.height)
+			ctx.fillText("Waves (frequencies)", 0, 0)
+		}
+	}
+})
+</script>
+
 # Animating Water with the FFT
 
 Enough explanations! We already know how to make waves by animating some sines and cosines, and we have a magic algorithm that can calculate a lot of sines and cosines efficiently. Lets put the two together and animate some waves!
@@ -674,12 +793,13 @@ new Widget("fft1-waves", widget => {
 		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
 		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
 		
-		if(widget.mleft) SPECTRA.re[mi] = my/Math.abs(mi_signed)
+		if(widget.mleft) SPECTRA.re[mi] = my/(mi == 0 ? 1 : Math.abs(mi_signed))
 		if(widget.mright) SPECTRA.re[mi] = 0
 		
 		for(let i = 0; i < SPECTRA.n; i++){
 			ctx.fillStyle = i == mi ? "#0F04" : "#0002"
-			ctx.fillRect(i, 0, 0.9, (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))*SPECTRA.re[i]);
+			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))
+			ctx.fillRect(i, 0, 0.9, weight*SPECTRA.re[i]);
 		}
 		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
@@ -788,13 +908,14 @@ new Widget("fft2-waves", widget => {
 		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
 		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
 		
-		if(widget.mleft) SPECTRA.re[-mi & (SPECTRA.n - 1)] = my/Math.abs(mi_signed)
+		if(widget.mleft) SPECTRA.re[-mi & (SPECTRA.n - 1)] = my/(mi == 0 ? 1 : Math.abs(mi_signed))
 		if(widget.mright) SPECTRA.re[-mi & (SPECTRA.n - 1)] = 0
 		
 		for(let i = 0; i < SPECTRA.n; i++){
 			const j = -i & (SPECTRA.n - 1)
 			ctx.fillStyle = j == mi ? "#0F04" : "#0002"
-			ctx.fillRect(j, 0, 0.9, (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))*SPECTRA.re[i]);
+			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))
+			ctx.fillRect(j, 0, 0.9, weight*SPECTRA.re[i]);
 		}
 		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
