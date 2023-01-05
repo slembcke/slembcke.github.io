@@ -29,8 +29,13 @@ class Widget {
 			this.mfocus = true
 			this.mprev = this.mpos = {x: e.offsetX, y: e.offsetY}
 		})
-		canvas.onmouseleave = (e => this.mfocus = false)
+		canvas.onmouseleave = (e => this.mfocus = this.mleft = this.mright = false)
 		canvas.onmousemove = (e => this.mpos = {x: e.offsetX, y: e.offsetY})
+		canvas.onmouseup = canvas.onmousedown = (e => {
+			this.mleft = ((e.buttons & 1) != 0)
+			this.mright = ((e.buttons & 2) != 0)
+		})
+		canvas.oncontextmenu = (e => false)
 		
 		this.mfocus = false
 		this.mpos = {x: 0, y: 0}
@@ -38,6 +43,12 @@ class Widget {
 		
 		canvas.widget = this
 		VISIBILITY.observe(canvas)
+	}
+	
+	get mlocal(){
+		const {x, y} = this.mpos
+		const m = this.ctx.getTransform().inverse()
+		return {x:x*m.a + y*m.c + m.e, y:x*m.b + y*m.d + m.f}
 	}
 }
 
@@ -84,8 +95,10 @@ Rendering and animating water are both pretty big topics, so this article is goi
 
 <script>'use strict';
 const AMPLITUDES = [
-	0.0, 0.4, 2.0, 2.8, 3.5, 1.5, 3.0, 1.5,
-	1.7, 1.2, 1.3, 0.6, 0.9, 0.4, 0.1, 0.4,
+	0.0, 4.0, 4.8, 3.3,
+	2.2, 1.7, 1.3, 1.2, 
+	1.4, 1.7, 1.1, 0.4,
+	0.4, 0.7, 1.0, 0.5,
 ];
 
 new Widget("wavies", widget => {
@@ -585,18 +598,16 @@ new Widget("fft-waves", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
-	// Setup the waves with some initial frequencies in it.
-	const spectra = lifft_complex_arr(64)
-	for(let i = 0; i < AMPLITUDES.length; i++){
-		const phase = 2*Math.PI*Math.random()
-		spectra.re[i] = AMPLITUDES[i]*Math.cos(phase)
-		spectra.im[i] = AMPLITUDES[i]*Math.sin(phase)
+	const spectra = lifft_complex_arr(64), phases = []
+	for(let i = 0; i < spectra.n; i++){
+		spectra.re[i] = AMPLITUDES[i] || 0
+		phases[i] = 2*Math.PI*Math.random()
 	}
 	
 	return function(t){
 		const spectra_y = lifft_complex_arr(64)
 		for(let i = 0; i < spectra.n; i++){
-			const phase = -t*Math.sqrt(i)*Math.PI
+			const phase = phases[i] - t*Math.sqrt(i)*Math.PI
 			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
 			
 			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
@@ -604,18 +615,33 @@ new Widget("fft-waves", widget => {
 			spectra_y.im[i] = p.im
 		}
 		const water_y = lifft_inverse_complex(spectra_y)
-		
 		const scale = canvas.width/(water_y.n - 1)
+		
+		ctx.setTransform(scale, 0, 0, -30, 0, canvas.height)
+		const {x:mx, y:my} = widget.mlocal
+		const mi = Math.floor(mx)
+		
+		if(widget.mleft) spectra.re[mi] = my
+		if(widget.mright) spectra.re[mi] = 0
+		
+		for(let i = 0; i < spectra.n; i++){
+			ctx.fillStyle = i == mi ? "#0F04" : "#0002"
+			ctx.fillRect(i, 0, 0.9, spectra.re[i]);
+		}
+		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
 		ctx.lineCap = ctx.lineJoin = "round"
 		
-		ctx.beginPath()
-		for(let i = 0; i < water_y.n; i++){
-			ctx.lineTo(i - 1.0*water_y.im[i], water_y.re[i])
-		}
 		ctx.lineWidth = 3/scale
 		ctx.strokeStyle = "#0CF"
+		ctx.beginPath()
+		for(let i = 0; i < water_y.n; i++) ctx.lineTo(i - water_y.im[i], water_y.re[i])
 		ctx.stroke()
+		
+		ctx.setTransform(2, 0, 0, 2, canvas.width/2, canvas.height/4)
+		ctx.fillStyle = "#000"
+		ctx.textAlign = "center"
+		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0)
 	}
 })
 </script>
