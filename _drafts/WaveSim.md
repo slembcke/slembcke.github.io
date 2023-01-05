@@ -95,10 +95,10 @@ Rendering and animating water are both pretty big topics, so this article is goi
 
 <script>'use strict';
 const AMPLITUDES = [
-	0.0, 4.0, 4.8, 3.3,
-	2.2, 1.7, 1.3, 1.2, 
-	1.4, 1.7, 1.1, 0.4,
-	0.4, 0.7, 1.0, 0.5,
+	0.0, 4.0, 6.4, 5.4,
+	2.7, 0.6, 0.5, 0.6,
+	1.0, 1.0, 0.7, 0.3,
+	0.2, 0.5, 0.6, 0.2
 ];
 
 new Widget("wavies", widget => {
@@ -460,14 +460,20 @@ new Widget("two-waves", widget => {
 		ctx.lineWidth = 3/scale
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
-		for(let i = -n; i < n; i++) ctx.lineTo(i - 4*Math.sin(i/8 - t), 4*Math.cos(i/8 - t))
+		for(let i = -n; i < n; i++){
+			const phase = i/8 - t*10/Math.sqrt(8)
+			ctx.lineTo(i - 3*Math.sin(phase), 3*Math.cos(phase))
+		}
 		ctx.stroke()
 		
 		// Draw short wave
 		ctx.lineWidth = 2/scale
 		ctx.strokeStyle = "#F00"
 		ctx.beginPath()
-		for(let i = -n; i < n; i++) ctx.lineTo(i - 1*Math.sin(i/2 - Math.sqrt(4)*t), 1*Math.cos(i/2 - Math.sqrt(4)*t))
+		for(let i = -n; i < n; i++){
+			const phase = i/2 - t*10/Math.sqrt(2)
+			ctx.lineTo(i - 0.5*Math.sin(phase), 0.5*Math.cos(phase))
+		}
 		ctx.stroke()
 	}
 })
@@ -478,7 +484,6 @@ When plotted separately it looks... weird. It did not seem intuitive to me that 
 <canvas id="mixed-waves" style="border:solid 1px #0002;"></canvas>
 
 <textarea id="two-wave-code" rows="10" style="width:100%; font-size:125%" spellcheck="false">
-time *= 10; // Speed up time a bit
 x_out = x, y_out = 0;
 
 let amp0 = 3.0, len0 = 8;
@@ -534,7 +539,7 @@ new Widget("mixed-waves", widget => {
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
 		for(let i = -n; i < n; i++){
-			let [x, y] = func(i, t)
+			let [x, y] = func(i, 10*t)
 			ctx.lineTo(x, y)
 		}
 		ctx.stroke()
@@ -590,43 +595,90 @@ Enough explanations! We already know how to make waves by animating some sines a
 
 <canvas id="fft-waves" style="border:solid 1px #0002;"></canvas>
 
-Many waves mixed together with an FFT.
-{: style="text-align: center"}
+<textarea id="fft1-code" rows="8" style="width:100%; font-size:125%" spellcheck="false">
+for(let i = 0; i < waves.n; i++){
+  let phase = -time*sqrt(i)
+  let phase_complex = complex(cos(phase), sin(phase));
+  waves[i] = complex_multiply(phase_complex, waves[i])
+}
+water = inverse_fft(waves)
+</textarea>
+<pre id="fft1-error" hidden="true"></pre>
 
 <script>'use strict';
 new Widget("fft-waves", widget => {
 	const {canvas, ctx} = widget
 	canvas.height = canvas.width/4
 	
-	const spectra = lifft_complex_arr(64), phases = []
-	for(let i = 0; i < spectra.n; i++){
-		spectra.re[i] = AMPLITUDES[i] || 0
+	const SPECTRA = lifft_complex_arr(64), phases = []
+	for(let i = 0; i < SPECTRA.n; i++){
+		SPECTRA.re[i] = AMPLITUDES[i] || 0
 		phases[i] = 2*Math.PI*Math.random()
 	}
 	
-	return function(t){
-		const spectra_y = lifft_complex_arr(64)
-		for(let i = 0; i < spectra.n; i++){
-			const phase = phases[i] - t*Math.sqrt(i)*Math.PI
-			const w = lifft_complex(Math.cos(phase), Math.sin(phase));
-			
-			const p = lifft_cmul(w, lifft_complex(spectra.re[i], spectra.im[i]))
-			spectra_y.re[i] = p.re
-			spectra_y.im[i] = p.im
+	const spectra = lifft_complex_arr(64)
+	const waves = new Proxy(spectra, {
+		get: (arr, idx) => arr[idx] || lifft_complex(arr.re[idx], arr.im[idx]),
+		set: (arr, idx, val) => {
+			arr.re[idx] = val.re
+			arr.im[idx] = val.im
+			return true
+		},
+	})
+	
+	function compile(code){
+		return Function(
+			"time", "waves",
+			`'use strict';
+				const {cos, sin, sqrt} = Math
+				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
+				let water
+				${code}
+				return water
+			`
+		)
+	}
+
+	const code_area = document.getElementById("fft1-code")
+	let func = compile(code_area.value)
+	code_area.oninput = (e => {
+		const output = document.getElementById("fft1-error")
+		try {
+			const f = compile(code_area.value)
+			f(0, waves)
+			func = f
+			output.hidden = true
+		} catch(err) {
+			console.error(err)
+			output.hidden = false
+			output.textContent = err
 		}
-		const water_y = lifft_inverse_complex(spectra_y)
-		const scale = canvas.width/(water_y.n - 1)
+	})
+	
+	return function(t){
+		// Init spectra with SPECTRA*phases.
+		for(let i = 0; i < SPECTRA.n; i++){
+				const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
+				const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
+				spectra.re[i] = p.re
+				spectra.im[i] = p.im
+		}
 		
-		ctx.setTransform(scale, 0, 0, -30, 0, canvas.height)
+		const water = func(4*t, waves)
+		
+		const scale = canvas.width/(water.n - 1)
+		
+		ctx.setTransform(canvas.width/water.n, 0, 0, -5, 0, canvas.height)
 		const {x:mx, y:my} = widget.mlocal
-		const mi = Math.floor(mx)
+		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
+		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
 		
-		if(widget.mleft) spectra.re[mi] = my
-		if(widget.mright) spectra.re[mi] = 0
+		if(widget.mleft) SPECTRA.re[mi] = my/Math.abs(mi_signed)
+		if(widget.mright) SPECTRA.re[mi] = 0
 		
-		for(let i = 0; i < spectra.n; i++){
+		for(let i = 0; i < SPECTRA.n; i++){
 			ctx.fillStyle = i == mi ? "#0F04" : "#0002"
-			ctx.fillRect(i, 0, 0.9, spectra.re[i]);
+			ctx.fillRect(i, 0, 0.9, i*SPECTRA.re[i]);
 		}
 		
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
@@ -635,47 +687,23 @@ new Widget("fft-waves", widget => {
 		ctx.lineWidth = 3/scale
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
-		for(let i = 0; i < water_y.n; i++) ctx.lineTo(i - water_y.im[i], water_y.re[i])
+		for(let i = 0; i < water.n; i++) ctx.lineTo(i - water.im[i], water.re[i])
 		ctx.stroke()
 		
-		ctx.setTransform(2, 0, 0, 2, canvas.width/2, canvas.height/4)
-		ctx.fillStyle = "#000"
+		ctx.fillStyle = "#0008"
 		ctx.textAlign = "center"
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height)
 		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0)
+		
+		if(widget.mfocus){
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height)
+			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0)
+		}
 	}
 })
 </script>
 
 That looks pretty good to my eyes. With all the wavefronts passing one another it looks almost random, but yet it's _entirely_ predcitable. The waves that make up the water always have the same amplitude, and only their phase is shifted to the current time using the same method as the simpler waves from earlier. The only difference is now there are over a dozen waves instead of just two. Lets look at some psuedo-code:
-
-```python
-# Amplitudes of the various waves at start
-# I kinda just made these up favoring longer wavelengths.
-AMPLITUDES = [...]
-
-# Calculate the starting waves.
-# I use the amplitudes with a random phase.
-# The random phose prevents them from all lining up at start.
-WAVES = complex_array_with_length(64)
-for i in 0 to WAVES.length:
-	amp, phase = AMPLITUDES[i], 2*PI*random()
-	WAVES[i] = complex_number(amp*cos(phase), amp*sin(phase))
-
-def update_water(time):
-	# Make a copy of the waves with updated phases.
-	waves = complex_array_with_length(WAVES.length)
-	for i in 0 to WAVES.length:
-		# Calculate the phase for like we did with sines/cosines.
-		const phase = -t*sqrt(i)
-		# Make a complex number with the phase angle we want.
-		const w = complex_number(cos(phase), sin(phase));
-		# Complex multiplication adds the phase angles.
-		waves[i] = complex_multiply(w, WAVES[i])
-	
-	# All of the waves are ready. Do all the sines/cosines!
-	water = fft_inverse(waves)
-	return water
-```
 
 TODO Waves moving backwards are broken though
 
