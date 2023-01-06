@@ -9,75 +9,75 @@ permalink: WaterWaves
 <script src="js/lifft.js" /></script>
 
 <script>'use strict';
-const WIDGETS = []
+const WIDGETS = [];
 
 let VISIBILITY = new IntersectionObserver(function(list){
-	for(let e of list) e.target.widget.visible = e.intersectionRatio > 0
+	for(let e of list) e.target.widget.visible = e.intersectionRatio > 0;
 })
 
 class Widget {
 	constructor(canvas_id, body){
-		const canvas = this.canvas = document.getElementById(canvas_id)
-		canvas.width = canvas.parentElement.clientWidth
-		this.ctx = canvas.getContext("2d")
+		const canvas = this.canvas = document.getElementById(canvas_id);
+		canvas.width = canvas.parentElement.clientWidth;
+		this.ctx = canvas.getContext("2d");
 		
-		this.repaint = body(this)
-		this.visible = false
-		WIDGETS.push(this)
+		this.repaint = body(this);
+		this.visible = false;
+		WIDGETS.push(this);
 		
 		canvas.onmouseenter = (e => {
-			this.mfocus = true
-			this.mprev = this.mpos = {x: e.offsetX, y: e.offsetY}
+			this.mfocus = true;
+			this.mprev = this.mpos = {x: e.offsetX, y: e.offsetY};
 		})
-		canvas.onmouseleave = (e => this.mfocus = this.mleft = this.mright = false)
-		canvas.onmousemove = (e => this.mpos = {x: e.offsetX, y: e.offsetY})
+		canvas.onmouseleave = (e => this.mfocus = this.mleft = this.mright = false);
+		canvas.onmousemove = (e => this.mpos = {x: e.offsetX, y: e.offsetY});
 		canvas.onmouseup = canvas.onmousedown = (e => {
-			this.mleft = ((e.buttons & 1) != 0)
-			this.mright = ((e.buttons & 2) != 0)
+			this.mleft = ((e.buttons & 1) != 0);
+			this.mright = ((e.buttons & 2) != 0);
 		})
-		canvas.oncontextmenu = (e => false)
+		canvas.oncontextmenu = (e => false);
 		
-		this.mfocus = false
-		this.mpos = {x: 0, y: 0}
-		this.mprev = {x: 0, y: 0}
+		this.mfocus = false;
+		this.mpos = {x: 0, y: 0};
+		this.mprev = {x: 0, y: 0};
 		
-		canvas.widget = this
-		VISIBILITY.observe(canvas)
+		canvas.widget = this;
+		VISIBILITY.observe(canvas);
 	}
 	
 	get mlocal(){
-		const {x, y} = this.mpos
-		const m = this.ctx.getTransform().inverse()
-		return {x:x*m.a + y*m.c + m.e, y:x*m.b + y*m.d + m.f}
+		const {x, y} = this.mpos;
+		const m = this.ctx.getTransform().inverse();
+		return {x:x*m.a + y*m.c + m.e, y:x*m.b + y*m.d + m.f};
 	}
 }
 
-let TIME = 0
+let TIME = 0;
 function ANIMATE(ms){
-	const time = 1e-3*ms
-	const dt = (time - TIME) + Number.MIN_VALUE
-	TIME = time
+	const time = 1e-3*ms;
+	const dt = (time - TIME) + Number.MIN_VALUE;
+	TIME = time;
 	
 	for(let widget of WIDGETS){
 		if(widget.visible){
-			widget.dt = dt
+			widget.dt = dt;
 			widget.mvel = {x:(widget.mpos.x - widget.mprev.x)/dt, y:(widget.mpos.y - widget.mprev.y)/dt};
 			widget.mprev = widget.mpos;
 			
-			widget.ctx.clearRect(0, 0, widget.canvas.width, widget.canvas.height)
-			widget.ctx.save()
+			widget.ctx.clearRect(0, 0, widget.canvas.width, widget.canvas.height);
+			widget.ctx.save();
 			try {
-				widget.repaint(time)
+				widget.repaint(time);
 			} catch(e){
-				console.error(e)
+				console.error(e);
 			}
-			widget.ctx.restore()
+			widget.ctx.restore();
 		}
 	}
 	
-	window.requestAnimationFrame(ANIMATE)
+	window.requestAnimationFrame(ANIMATE);
 }
-window.requestAnimationFrame(ANIMATE)
+window.requestAnimationFrame(ANIMATE);
 </script>
 
 People _love_ water in video games. I can't count the number of times I've heard people talking about how realistic the water is in the latest and greatest game. I make no claims to be immune to it either as I've stopped to appreciate it's beauty in many a game. :)
@@ -102,113 +102,108 @@ const AMPLITUDES = [
 ];
 
 new Widget("wavies", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
-	const mradius = 20
 	
 	// Setup the waves with some initial frequencies in it.
 	const spectra = lifft_complex_arr(64)
 	for(let i = 0; i < AMPLITUDES.length; i++){
-		const phase = 2*Math.PI*Math.random()
-		spectra.re[i] = AMPLITUDES[i]*Math.cos(phase)
-		spectra.im[i] = AMPLITUDES[i]*Math.sin(phase)
+		const phase = 2*Math.PI*Math.random();
+		[spectra.re[i], spectra.im[i]] = [AMPLITUDES[i]*Math.cos(phase), AMPLITUDES[i]*Math.sin(phase)];
 	}
-	let waves = lifft_inverse_complex(spectra)
+	let waves = lifft_inverse_complex(spectra);
 	
 	// Interact with the waves using the mouse.
 	function interact_waves(mvel, waves){
 		// Calculate mouse position in wave coordinates
-		const scale = waves.n/canvas.width
-		const mx = widget.mpos.x*scale
-		const my = canvas.height/2 - widget.mpos.y - waves.re[Math.floor(mx)]/scale
+		const scale = waves.n/canvas.width, mradius = 20;
+		const mx = widget.mpos.x*scale;
+		const my = canvas.height/2 - widget.mpos.y - waves.re[Math.floor(mx)]/scale;
 		
 		// The magnitude of the interaction. Linear fallof above the waterline, and exponential below.
-		const mag = Math.min(Math.max(0, 1 - my/mradius), Math.exp(0.5*my/mradius))
+		const mag = Math.min(Math.max(0, 1 - my/mradius), Math.exp(0.5*my/mradius));
 		// Calculate the width of the interaction, widening it the deeper it goes.
-		const width = Math.max(-1.5*my/mradius, 2)
+		const width = Math.max(-1.5*my/mradius, 2);
 		
 		// Apply the interaction to the wave near the mouse.
-		const x0 = Math.max(0, Math.floor(mx - width))
-		const x1 = Math.min(Math.ceil(mx + width), waves.n - 1)
+		const x0 = Math.max(0, Math.floor(mx - width));
+		const x1 = Math.min(Math.ceil(mx + width), waves.n - 1);
 		for(let i = x0; i < x1; i++){
 			// Use a gaussian curve as a strength to apply the interaction with.
-			const dx = mx - i - 0.5, dx_w = dx/width
-			const gauss = -width*(1 + Math.exp(dx_w*dx_w))
+			const dx = mx - i - 0.5, dx_w = dx/width;
+			const gauss = -width*(1 + Math.exp(dx_w*dx_w));
 			
 			// Interpolate the wave velocity towards the mouse velocity.
-			const damp = 1 - Math.exp(0.3*mag/gauss)
-			waves.im[i] -= ((dx*mvel.x + mvel.y)/waves.n + waves.im[i])*damp
+			const damp = 1 - Math.exp(0.3*mag/gauss);
+			waves.im[i] -= ((dx*mvel.x + mvel.y)/waves.n + waves.im[i])*damp;
 		}
 	}
 	
 	// Update the waves
 	function update_waves(waves, damping, dt){
-		const n = waves.n
-		const spectra_x = lifft_complex_arr(n, waves.type)
-		const spectra_y = lifft_forward_complex(waves)
+		const n = waves.n;
+		const spectra_x = lifft_complex_arr(n, waves.type);
+		const spectra_y = lifft_forward_complex(waves);
 		// The first value is the water height, force it to stay at 0.
-		spectra_y.re[0] = spectra_y.im[0] = 0
+		spectra_y.re[0] = spectra_y.im[0] = 0;
 		
 		// Now iterate over the +/- frequency pairs and update their phases and AMPLITUDES.
 		for(let i = 0; i <= n/2; i++){
-			const phase = -dt*Math.sqrt(i)*Math.PI, mag = Math.exp(-dt*damping*i)
+			const phase = -dt*Math.sqrt(i)*Math.PI, mag = Math.exp(-dt*damping*i);
 			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
 			
-			const p = lifft_cmul(w, lifft_complex(spectra_y.re[i], spectra_y.im[i]))
-			spectra_x.re[i] = +p.im, spectra_x.im[i] = -p.re
-			spectra_y.re[i] = +p.re, spectra_y.im[i] = +p.im
+			const p = lifft_cmul(w, lifft_complex(spectra_y.re[i], spectra_y.im[i]));
+			[spectra_x.re[i], spectra_x.im[i]] = [p.re, p.im];
+			[spectra_y.re[i], spectra_y.im[i]] = [+p.re, +p.im];
 			
-			const j = -i & (n - 1)
-			const q = lifft_cmul(w, lifft_complex(spectra_y.re[j], spectra_y.im[j]))
-			spectra_x.re[j] = -q.im, spectra_x.im[j] = +q.re
-			spectra_y.re[j] = +q.re, spectra_y.im[j] = +q.im
+			const j = -i & (n - 1);
+			const q = lifft_cmul(w, lifft_complex(spectra_y.re[j], spectra_y.im[j]));
+			[spectra_x.re[j], spectra_x.im[j]] = [-q.im, +q.re];
+			[spectra_y.re[j], spectra_y.im[j]] = [+q.re, +q.im];
 		}
 		
-		return [lifft_inverse_complex(spectra_x), lifft_inverse_complex(spectra_y)]
+		return [lifft_inverse_complex(spectra_x), lifft_inverse_complex(spectra_y)];
 	}
 	
 	return function(time){
-		const dt = widget.dt, mvel = widget.mvel
+		const dt = widget.dt, mvel = widget.mvel;
 		
 		// Apply mouse interaction if necessary
-		if(widget.mfocus && 0 < widget.mpos.x && widget.mpos.x < canvas.width) interact_waves(mvel, waves)
+		if(widget.mfocus && 0 < widget.mpos.x && widget.mpos.x < canvas.width) interact_waves(mvel, waves);
 		
 		// Update the waves.
-		const [wave_x, wave_y] = update_waves(waves, 2e-2, dt)
-		waves = wave_y
+		const [wave_x, wave_y] = update_waves(waves, 2e-2, dt);
+		waves = wave_y;
 		
-		const scale = canvas.width/(waves.n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		const scale = canvas.width/(waves.n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
-		ctx.beginPath()
-		ctx.lineTo(0, -100)
+		ctx.beginPath();
+		ctx.lineTo(0, -100);
 		for(let i = 0; i < waves.n; i++){
-			ctx.lineTo(i - 0.25*wave_x.re[i], wave_y.re[i])
+			ctx.lineTo(i - 0.25*wave_x.re[i], wave_y.re[i]);
 		}
-		ctx.lineTo(canvas.width, -100)
-		ctx.fillStyle = "#0CF"
-		ctx.fill()
-		// ctx.strokeStyle = "#0004"
-		// ctx.lineWidth = 3/scale
-		// ctx.stroke()
+		ctx.lineTo(canvas.width, -100);
+		ctx.fillStyle = "#0CF";
+		ctx.fill();
 
 		// Draw mouse
-		ctx.setTransform(1, 0, 0, 1, 0, 0)
-		ctx.fillStyle = "#FF0"
-		ctx.strokeStyle = "#F80"
-		ctx.lineWidth = 2
-		ctx.beginPath()
-		ctx.arc(widget.mpos.x, widget.mpos.y, 20, 0, 2*Math.PI)
-		ctx.fill()
-		ctx.stroke()
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.fillStyle = "#FF0";
+		ctx.strokeStyle = "#F80";
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(widget.mpos.x, widget.mpos.y, 20, 0, 2*Math.PI);
+		ctx.fill();
+		ctx.stroke();
 		
 		if(!widget.mfocus){
-			ctx.setTransform(3, 0, 0, 3, canvas.width/2, canvas.height/3)
-			ctx.fillStyle = "#0008"
-			ctx.textAlign = "center"
-			ctx.fillText("Use Mouse to Interact", 0, 0)
+			ctx.setTransform(3, 0, 0, 3, canvas.width/2, canvas.height/3);
+			ctx.fillStyle = "#0008";
+			ctx.textAlign = "center";
+			ctx.fillText("Use Mouse to Interact", 0, 0);
 		}
 	}
 })
@@ -226,7 +221,7 @@ There's actually quite a lot of algorithms for simulating water. One of the simp
 Interactive water ripples in Metroid Prime
 {: style="text-align: center"}
 
-This is where fourier based water simulation comes in using Fast Fourier Transforms, or FFTs. It gives you an intuitive way to perform much fancier filtering, and without a lot of extra cost! Instead of treating the grid like a bunch of locations that have waves in them somehow, the fourier transform lets you convert the grid to a list of waves, and then back into a grid. This makes it easier to handle some of water's unique characteristics. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves giving water it's unique pulsing look as the different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented the FFT technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but it's light on the details and assumes you already know how FFTs work. That's what I'd like to fill in with this article.
+This is where fourier based water simulation comes in using Fast Fourier Transforms, or FFTs. It gives you an intuitive way to perform much fancier filtering, and without a lot of extra cost! Instead of treating the grid like a bunch of locations that have waves in them somehow, the fourier transform lets you convert the grid to a list of waves, work with those, and then convert them back into a grid. It's much easier to handle some of water's unique characteristics this way. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves giving water it's unique pulsing look as the different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented the FFT technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but it's light on the details and assumes you already know how FFTs work. That's what I'd like to fill in with this article.
 
 ![Ocean waves in Assasin's Creed](images/waves/acbf-water.jpg)
 {: style="text-align: center"}
@@ -263,61 +258,61 @@ A simple animated wave
 
 <script>'use strict';
 new Widget("simple-wave", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	return function(t){
-		const n = 20, scale = canvas.width/(n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		const n = 20, scale = canvas.width/(n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
 		// Draw axis
-		ctx.lineWidth = 1/scale
-		ctx.strokeStyle = "#888"
-		ctx.beginPath()
-		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0)
-		ctx.stroke()
+		ctx.lineWidth = 1/scale;
+		ctx.strokeStyle = "#888";
+		ctx.beginPath();
+		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0);
+		ctx.stroke();
 		
 		// Draw velocity
-		ctx.strokeStyle = "#F002"
-		ctx.beginPath()
-		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.sin(i/2 - t))
-		ctx.stroke()
+		ctx.strokeStyle = "#F002";
+		ctx.beginPath();
+		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.sin(i/2 - t));
+		ctx.stroke();
 		
 		// Draw spokes
-		ctx.lineWidth = 1/scale
-		ctx.strokeStyle = "#0002"
-		ctx.beginPath()
+		ctx.lineWidth = 1/scale;
+		ctx.strokeStyle = "#0002";
+		ctx.beginPath();
 		for(let i = -n/2; i <= n/2; i++){
-			ctx.moveTo(i, 0); ctx.lineTo(i, 2*Math.cos(i/2 - t))
+			ctx.moveTo(i, 0); ctx.lineTo(i, 2*Math.cos(i/2 - t));
 		}
-		ctx.stroke()
+		ctx.stroke();
 		
 		// Draw wave
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
-		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.cos(i/2 - t))
-		ctx.stroke()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
+		for(let i = -n/2; i <= n/2; i++) ctx.lineTo(i, 2*Math.cos(i/2 - t));
+		ctx.stroke();
 		
-		const y = 2*Math.cos(-t), vy = Math.sin(-t)
-		ctx.fillStyle = ctx.strokeStyle = "#F00"
-		ctx.lineWidth = 2/scale
+		const y = 2*Math.cos(-t), vy = Math.sin(-t);
+		ctx.fillStyle = ctx.strokeStyle = "#F00";
+		ctx.lineWidth = 2/scale;
 		
 		// Draw dot
-		ctx.beginPath()
-		ctx.arc(0, y, 8/scale, 0, 2*Math.PI)
-		ctx.fill()
+		ctx.beginPath();
+		ctx.arc(0, y, 8/scale, 0, 2*Math.PI);
+		ctx.fill();
 		
 		// Draw velocity line
-		ctx.beginPath()
-		ctx.moveTo(0, y); ctx.lineTo(0, y + vy)
-		ctx.stroke()
-		ctx.beginPath()
-		ctx.moveTo(0, y + vy + Math.sign(vy)*0.3)
-		ctx.lineTo(-0.15, y + vy)
-		ctx.lineTo(+0.15, y + vy)
-		ctx.fill()
+		ctx.beginPath();
+		ctx.moveTo(0, y); ctx.lineTo(0, y + vy);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(0, y + vy + Math.sign(vy)*0.3);
+		ctx.lineTo(-0.15, y + vy);
+		ctx.lineTo(+0.15, y + vy);
+		ctx.fill();
 	}
 })
 </script>
@@ -357,8 +352,8 @@ Edit this code!
 
 <script>'use strict';
 new Widget("better-wave", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	const EXAMPLE = {
 		trochoidal: (
@@ -369,7 +364,7 @@ new Widget("better-wave", widget => {
 		sine: (
 			"y_out = amplitude*cos(x/wavelength - time/wavelength);\n"
 		),
-	}
+	};
 	
 	function compile(code){
 		return Function(
@@ -380,87 +375,87 @@ new Widget("better-wave", widget => {
 				${code};
 				return [x_out, y_out];
 			`
-		)
+		);
 	}
 	
-	const code_area = document.getElementById("better-wave-code")
-	code_area.value = EXAMPLE.trochoidal
+	const code_area = document.getElementById("better-wave-code");
+	code_area.value = EXAMPLE.trochoidal;
 	
-	let func = compile(code_area.value)
+	let func = compile(code_area.value);
 	code_area.oninput = (e => {
-		const output = document.getElementById("better-wave-error")
+		const output = document.getElementById("better-wave-error");
 		try {
-			const f = compile(code_area.value)
-			f(0, 0, 1, 1)
-			func = f
-			output.hidden = true
+			const f = compile(code_area.value);
+			f(0, 0, 1, 1);
+			func = f;
+			output.hidden = true;
 		} catch(err) {
-			console.error(err)
-			output.hidden = false
-			output.textContent = err
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
 		}
 	})
 	
-	const example = document.getElementById("example-select")
-	example.value = "trochoidal"
+	const example = document.getElementById("example-select");
+	example.value = "trochoidal";
 	example.oninput = (e => {
-		code_area.value = EXAMPLE[example.value]
-		code_area.oninput()
+		code_area.value = EXAMPLE[example.value];
+		code_area.oninput();
 	})
 	
-	const wavelength_slider = document.getElementById("better-wave-wavelength")
-	const amplitude_slider = document.getElementById("better-wave-amplitude")
+	const wavelength_slider = document.getElementById("better-wave-wavelength");
+	const amplitude_slider = document.getElementById("better-wave-amplitude");
 	
 	return function(t){
-		const n = 20, scale = canvas.width/(n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		const n = 20, scale = canvas.width/(n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
 		// Draw axis
-		ctx.lineWidth = 1/scale
-		ctx.strokeStyle = "#888"
-		ctx.beginPath()
-		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0)
-		ctx.stroke()
+		ctx.lineWidth = 1/scale;
+		ctx.strokeStyle = "#888";
+		ctx.beginPath();
+		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0);
+		ctx.stroke();
 		
-		const wavelength = n*Math.exp(wavelength_slider.value)*0.5/Math.PI
-		const amplitude = 0 + amplitude_slider.value
-		const time = 4*t
+		const wavelength = n*Math.exp(wavelength_slider.value)*0.5/Math.PI;
+		const amplitude = 0 + amplitude_slider.value;
+		const time = 4*t;
 		
 		// Draw spokes
-		ctx.lineWidth = 1/scale
-		ctx.strokeStyle = "#0002"
-		ctx.beginPath()
+		ctx.lineWidth = 1/scale;
+		ctx.strokeStyle = "#0002";
+		ctx.beginPath();
 		for(let i = -n/2; i <= n/2; i++){
-			const [x, y] = func(i, time, amplitude, wavelength)
-			ctx.moveTo(i, 0); ctx.lineTo(x, y)
+			const [x, y] = func(i, time, amplitude, wavelength);
+			ctx.moveTo(i, 0); ctx.lineTo(x, y);
 		}
-		ctx.stroke()
+		ctx.stroke();
 		
 		// Draw wave
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
 		for(let i = -n; i < n; i++){
-			const [x, y] = func(i, time, amplitude, wavelength)
-			ctx.lineTo(x, y)
+			const [x, y] = func(i, time, amplitude, wavelength);
+			ctx.lineTo(x, y);
 		}
-		ctx.stroke()
+		ctx.stroke();
 		
-		const [x0, y0] = func(0, time, amplitude, wavelength)
+		const [x0, y0] = func(0, time, amplitude, wavelength);
 		
 		// Draw circle
-		ctx.strokeStyle = "#F004"
-		ctx.lineWidth = 1/scale
-		ctx.beginPath()
-		ctx.arc(0, 0, amplitude, 0, 2*Math.PI)
-		ctx.stroke()
+		ctx.strokeStyle = "#F004";
+		ctx.lineWidth = 1/scale;
+		ctx.beginPath();
+		ctx.arc(0, 0, amplitude, 0, 2*Math.PI);
+		ctx.stroke();
 		
 		// Draw dot
-		ctx.fillStyle = "#F00"
-		ctx.beginPath()
-		ctx.arc(x0, y0, 6/scale, 0, 2*Math.PI)
-		ctx.fill()
+		ctx.fillStyle = "#F00";
+		ctx.beginPath();
+		ctx.arc(x0, y0, 6/scale, 0, 2*Math.PI);
+		ctx.fill();
 	}
 })
 </script>
@@ -500,38 +495,38 @@ If we plot these waves separately, you can see that the blue wave has 4x the wav
 
 <script>'use strict';
 new Widget("two-waves", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	return function(t){
-		const n = 80, scale = canvas.width/(n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		const n = 80, scale = canvas.width/(n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
 		// Draw long wave
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
 		for(let i = -n; i < n; i++){
-			const phase = i/8 - t*10/Math.sqrt(8)
-			ctx.lineTo(i - 3*Math.sin(phase), 3*Math.cos(phase))
+			const phase = i/8 - t*10/Math.sqrt(8);
+			ctx.lineTo(i - 3*Math.sin(phase), 3*Math.cos(phase));
 		}
-		ctx.stroke()
+		ctx.stroke();
 		
 		// Draw short wave
-		ctx.lineWidth = 2/scale
-		ctx.strokeStyle = "#F00"
-		ctx.beginPath()
+		ctx.lineWidth = 2/scale;
+		ctx.strokeStyle = "#F00";
+		ctx.beginPath();
 		for(let i = -n; i < n; i++){
-			const phase = i/2 - t*10/(2/Math.sqrt(2))
-			ctx.lineTo(i - 0.5*Math.sin(phase), 0.5*Math.cos(phase))
+			const phase = i/2 - t*10/(2/Math.sqrt(2));
+			ctx.lineTo(i - 0.5*Math.sin(phase), 0.5*Math.cos(phase));
 		}
-		ctx.stroke()
+		ctx.stroke();
 	}
 })
 </script>
 
-Mixing waves together is easy, you just add them together. In the case of trochoidal waves, you just add up all the cosines for the vertical position and all the sines for the horizontal offsets. Once you do that, you'll get a lovely wave with that signature "pulsing" look that real water waves get. Give it a try!
+Mixing waves is easy, you just add them together. Trochoidal waves have multiple parts so you add all the x parts together, the y parts together, and the z parts too if it's 3D. Once you do that the red and blue waves combine into this lovely wave that has that signature "pulsing" look like real waves.
 
 <canvas id="mixed-waves" style="border:solid 1px #0002;"></canvas>
 
@@ -553,8 +548,8 @@ Edit this code!
 
 <script>'use strict';
 new Widget("mixed-waves", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	function compile(code){
 		return Function(
@@ -565,55 +560,66 @@ new Widget("mixed-waves", widget => {
 				${code};
 				return [x_out, y_out];
 			`
-		)
+		);
 	}
 
-	const code_area = document.getElementById("two-wave-code")
-	let func = compile(code_area.value)
+	const code_area = document.getElementById("two-wave-code");
+	let func = compile(code_area.value);
 	code_area.oninput = (e => {
-		const output = document.getElementById("two-wave-error")
+		const output = document.getElementById("two-wave-error");
 		try {
-			const f = compile(code_area.value)
-			f(0, 0)
-			func = f
-			output.hidden = true
+			const f = compile(code_area.value);
+			f(0, 0);
+			func = f;
+			output.hidden = true;
 		} catch(err) {
-			console.error(err)
-			output.hidden = false
-			output.textContent = err
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
 		}
 	})
 
 	return function(t){
-		const n = 80, scale = canvas.width/(n - 1)
-		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		const n = 80, scale = canvas.width/(n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
 		// Draw long wave
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
 		for(let i = -n; i < n; i++){
-			let [x, y] = func(i, 10*t)
-			ctx.lineTo(x, y)
+			let [x, y] = func(i, 10*t);
+			ctx.lineTo(x, y);
 		}
-		ctx.stroke()
+		ctx.stroke();
 	}
 })
 </script>
 
 * Try different wavelengths
-* Try dividing by wavelength like before instead of it's square root
-* Can you cause the wave to break by adding smaller waves that are fine independently?
 * What happens if you pick wavelengths that are similar?
+* Can you cause the wave to break by adding smaller waves that are fine independently?
+* Try dividing time by wavelength like before instead of it's square root
+* Try dividing time by a constant
 
-If Mixing two waves looks so nice, you'd be correct to think that mixing more waves would make it look even better. The problem is how many do you need? For each additional wave you need to calculate a whole lot more sines and cosines. It gets even worse when you need to do this in 3D. CPUs and GPUs are insanely fast, but at some point brute forcing a problem won't work. Also, wasn't this supposed to be an article about interactive water simulation? How on earth do you interact with sine waves!?
+If Mixing two waves looks so nice, you'd be correct to think that mixing more waves can look even better. The problem is how many do you need? For each additional wave you need to calculate a whole lot more sines and cosines. It gets even worse when you need to do this in 3D. CPUs and GPUs are insanely fast, but at some point brute forcing a problem won't work. Also, wasn't this supposed to be an article about interactive water simulation? How on earth do you interact with sine waves!?
 
-## Mix All the Waves!
+## Mix _ALL_ the Waves!
 
-Since you already know that this article is about using the FFT to simulate water, perhaps you won't be surprised when I reveal that the FFT is the magical algorithm that can calculate 10's of thousands of sines and cosines without the cost. Even better, you don't really even need to know much about trigonometry. If you followed along with the scrolling sine waves above, you should be able to understand the rest of the article.
+Since you already know that this article is about using the FFT to simulate water, perhaps you won't be surprised when I reveal that the FFT is the magical solution that can calculate 10's of thousands of sines and cosines without the cost. Even better, you don't really even need to know much about trigonometry. If you followed along with the scrolling sine waves above, you should be able to understand the rest of the article just fine.
+
+# Complex Numbers
+
+The FFT operates on complex numbers. Don't let the name fool you, they're just fancy 2D vectors with many common properties. Addition works the same, and calculating their length or direction works the same way. One of the main differences is how they are written: instead of _(x,&nbsp;y)_ you would write _(x&nbsp;+&nbsp;y*i)_. The x part is called the "real" part, and the y part is called the "imaginary" part. The magic comes when you multiply them since it lets you do a bunch of trigonometry stuff without actually doing trigonometry. All you need to know for this article is that when you multiply two complex numbers you add the angles of their directions together and multiply their lengths to get the result. Basically you get scaling and rotation in the same step, and the implementation is just a few regular multiplications and additions. Magic!
+
+(TODO needs a diagram here probably?)
 
 # The FFT Algorithm
+
+One way to view the Fast Fourier Transform is a fast a way to break a sequence of numbers into an equivalent list of waves. When those waves are added back together, you get the original sequence back. Adding them back together means calculating a lot of sines and cosines, so the inverse FFT provides a fast way to do that. Part of what makes the FFT so quick is that it doesn't actually need to calculate any sines or cosines. How it works is pretty clever, but that's a topic for another article. :D
+
+Time to get our feet wet! On the left you have 16 pairs of sliders for the water surface, and on the right is 16 pairs of sliders for the waves it breaks down into. The pairs of sliders are complex numbers. On the left side, the water height is the "real" part, and the velocity is the "imaginary" part. On the right side the amplitude of the wave corresponds to the length of the complex number, and it's phase angle is the direction of it. So both sides are complex numbers, just shown in a way that makes sense. Right away, you can see when the water surface looks like a sine wave, it decomposes into a single wave.
 
 <canvas id="fft-io" style="border:solid 1px #0002;"></canvas>
 
@@ -622,147 +628,150 @@ Use the left mouse button to change values, or right mouse button to clear them.
 
 <script>'use strict';
 new Widget("fft-io", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/2
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/2;
 	
-	const N = 16
-	let input, output = lifft_complex_arr(N)
-	function calc_input(){input = lifft_inverse_complex(output)}
-	function calc_output(){output = lifft_forward_complex(input)}
+	const N = 16;
+	let input, output = lifft_complex_arr(N);
+	function calc_input(){input = lifft_inverse_complex(output)};
+	function calc_output(){output = lifft_forward_complex(input)};
 	
-	output.im[1] = -0.7
-	calc_input()
+	output.im[1] = -0.7;
+	calc_input();
 	
 	function draw_bars(x, y, centered, f){
-		let scale = 70, min, max
+		let scale = 70, min, max;
 		if(centered){
-			ctx.setTransform(15, 0, 0, -scale, x*canvas.width, y*canvas.height)
-			min = -1, max = 1
+			ctx.setTransform(15, 0, 0, -scale, x*canvas.width, y*canvas.height);
+			min = -1, max = 1;
 		} else {
-			ctx.setTransform(15, 0, 0, -2*scale, x*canvas.width, y*canvas.height + scale)
-			scale *= 2, min = 0, max = 1
+			ctx.setTransform(15, 0, 0, -2*scale, x*canvas.width, y*canvas.height + scale);
+			scale *= 2, min = 0, max = 1;
 		}
 		
-		ctx.fillStyle = "#DDD"
-		for(let i = 0; i < N; i++) ctx.fillRect(i - N/2, min, 0.9, max - min)
+		ctx.fillStyle = "#DDD";
+		for(let i = 0; i < N; i++) ctx.fillRect(i - N/2, min, 0.9, max - min);
 		
-		ctx.fillStyle = "#08C"
+		ctx.fillStyle = "#08C";
 		for(let i = 0; i < N; i++){
-			const value = Math.max(min, Math.min(f(i), max))
-			ctx.fillRect(i - N/2, 0, 0.9, value)
+			const value = Math.max(min, Math.min(f(i), max));
+			ctx.fillRect(i - N/2, 0, 0.9, value);
 		}
 		
-		ctx.strokeStyle = "#000"
-		ctx.lineWidth = 1/scale
-		ctx.beginPath()
-		ctx.lineTo(-N/2, 0)
-		ctx.lineTo(+N/2, 0)
-		ctx.stroke()
+		ctx.strokeStyle = "#000";
+		ctx.lineWidth = 1/scale;
+		ctx.beginPath();
+		ctx.lineTo(-N/2, 0);
+		ctx.lineTo(+N/2, 0);
+		ctx.stroke();
 	}
 	
 	function mouse_input(min, f){
-		const {x, y} = widget.mlocal
+		const {x, y} = widget.mlocal;
 		if(-N/2 < x && x < N/2 && min < y && y < 1){
-			const mi = Math.floor(x + N/2)
-			if(widget.mleft) f(mi, y)
-			if(widget.mright) f(mi, 0)
+			const mi = Math.floor(x + N/2);
+			if(widget.mleft) f(mi, y);
+			if(widget.mright) f(mi, 0);
 		}
 	}
 	
 	function get_abs(arr, i){return Math.hypot(arr.re[i], arr.im[i])}
 	function set_abs(arr, i, v){
-		const abs = get_abs(arr, i)
+		const abs = get_abs(arr, i);
 		if(abs > 0){
-			const coef = v/(get_abs(arr, i) + Number.MIN_VALUE)
-			arr.re[i] *= coef
-			arr.im[i] *= coef
+			const coef = v/(get_abs(arr, i) + Number.MIN_VALUE);
+			arr.re[i] *= coef;
+			arr.im[i] *= coef;
 		} else {
-			arr.re[i] = v
+			arr.re[i] = v;
 		}
 	}
 	
 	function get_arg(arr, i){return Math.atan2(arr.im[i], arr.re[i])/Math.PI}
 	function set_arg(arr, i, v){
 		const abs = get_abs(arr, i)
-		arr.re[i] = abs*Math.cos(v*Math.PI)
-		arr.im[i] = abs*Math.sin(v*Math.PI)
+		arr.re[i] = abs*Math.cos(v*Math.PI);
+		arr.im[i] = abs*Math.sin(v*Math.PI);
 	}
 	
 	return function(t){
-		draw_bars(0.2, 0.25, true, i => 4*input.re[i])
-		mouse_input(-1, (i, v) => {input.re[i] = v/4; calc_output()})
-		draw_bars(0.2, 0.75, true, i => 4*input.im[i])
-		mouse_input(-1, (i, v) => {input.im[i] = v/4; calc_output()})
+		draw_bars(0.2, 0.25, true, i => 4*input.re[i]);
+		mouse_input(-1, (i, v) => {input.re[i] = v/4; calc_output()});
+		draw_bars(0.2, 0.75, true, i => 4*input.im[i]);
+		mouse_input(-1, (i, v) => {input.im[i] = v/4; calc_output()});
 		
-		draw_bars(0.8, 0.25, false, i => get_abs(output, i))
-		mouse_input(0, (i, v) => {set_abs(output, i, v); calc_input()})
-		draw_bars(0.8, 0.75, true, i => get_arg(output, i))
-		mouse_input(-1, (i, v) => {set_arg(output, i, v); calc_input()})
+		draw_bars(0.8, 0.25, false, i => get_abs(output, i));
+		mouse_input(0, (i, v) => {set_abs(output, i, v); calc_input()});
+		draw_bars(0.8, 0.75, true, i => get_arg(output, i));
+		mouse_input(-1, (i, v) => {set_arg(output, i, v); calc_input()});
 		
 		{
-			ctx.textAlign = "center"
-			ctx.textBaseline = "middle"
-			ctx.fillStyle = "#000"
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#000";
 			
-			ctx.setTransform(1, 0, 0, 1, 0.5*canvas.width, 0.5*canvas.height)
-			ctx.lineWidth = 1
-			ctx.strokeStyle = "#000"
-			const w = 190, h = 100
-			ctx.strokeRect(-w/2, -h/2, w, h)
+			ctx.setTransform(1, 0, 0, 1, 0.5*canvas.width, 0.5*canvas.height);
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = "#000";
+			const w = 190, h = 100;
+			ctx.strokeRect(-w/2, -h/2, w, h);
 			
-			const scale = 2
-			ctx.transform(scale, 0, 0, scale, 0, 0)
-			ctx.strokeRect(0.5*(canvas.width - w), 0.5*(canvas.height - h), w, h)
+			const scale = 2;
+			ctx.transform(scale, 0, 0, scale, 0, 0);
+			ctx.strokeRect(0.5*(canvas.width - w), 0.5*(canvas.height - h), w, h);
 			
-			ctx.fillText("fft() -->", 0, -10)
-			ctx.fillText("<-- inverse_fft()", 0, 10)
+			ctx.fillText("fft() -->", 0, -10);
+			ctx.fillText("<-- inverse_fft()", 0, 10);
 			
-			ctx.setTransform(scale, 0, 0, scale, 0.2*canvas.width, 0.5*canvas.height)
-			ctx.fillText("Water Surface (x)", 0, 0)
+			ctx.setTransform(scale, 0, 0, scale, 0.2*canvas.width, 0.5*canvas.height);
+			ctx.fillText("Water Surface (x)", 0, 0);
 			
-			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.25*canvas.height)
-			ctx.fillText("Height (y)", 0, 0)
-			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.75*canvas.height)
-			ctx.fillText("Velocity (y)", 0, 0)
+			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.25*canvas.height);
+			ctx.fillText("Height (y)", 0, 0);
+			ctx.setTransform(0, -scale, scale, 0, 0.02*canvas.width, 0.75*canvas.height);
+			ctx.fillText("Velocity (y)", 0, 0);
 			
-			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.25*canvas.height)
-			ctx.fillText("Amplitude", 0, 0)
-			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.75*canvas.height)
-			ctx.fillText("Phase Angle", 0, 0)
+			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.25*canvas.height);
+			ctx.fillText("Amplitude", 0, 0);
+			ctx.setTransform(0, -scale, scale, 0, 0.98*canvas.width, 0.75*canvas.height);
+			ctx.fillText("Phase Angle", 0, 0);
 			
-			ctx.setTransform(scale, 0, 0, scale, 0.8*canvas.width, 0.5*canvas.height)
-			ctx.fillText("Waves (frequencies)", 0, 0)
+			ctx.setTransform(scale, 0, 0, scale, 0.8*canvas.width, 0.5*canvas.height);
+			ctx.fillText("Waves (frequencies)", 0, 0);
 		}
 	}
 })
 </script>
 
-~~The Fast Fourier Transform is an algorithm that can take a grid of N numbers that describe the water's surface (height and velocity), and turns it into a complete list of N sines and cosines for all the various sized waves present. It's companion, the inverse FFT, can take a list of sines and cosines and turn it back into the height and velocity. As it's name suggests, it's very fast. How the FFT works is beyond the scope of this article, but you should be able to find an FFT library for basically any programming language.~~
+Did you notice:
 
-~~The FFT has a couple of quirks. First, it treats it's input as if it's repeating. This is extremely handy if you want a result that is tileable. If you don't, then you'll need to leave some dead space at the edges where you can clamp the waves down to zero to prevent them from wrapping around. Another quirk is that the size of the input has to be a power of two (2, 4, 8, 16, etc). It's possible to work around that, but it's much easier to just work with the limitation.~~
+* ... that the 1st "wave" is really the just water level?
+* ... that the 2nd and last waves are almost the same?
+* ... the phase causes the 2nd and last waves to move in opposite directions?
+* ... the wavelength gets shorter as you move to the middle?
+* ... the 9th wave doesn't change phase like the rest?
+* ... that changing a single water value changes every wave?
+* ... that the height and velocity waves are always 90° out of phase?
+* ... that it has the same number of inputs as outputs?
+* ... that the size of the sequence, 16, is a power of two? (Not a coincidence!)
 
-~~The input and output of the FFT is fairly straightforward too once you see the pattern. It does use complex numbers, but don't worry if that gives you dread. The scrolling waves above already used them, and that's kinda all you need to know. Complex numbers have a "real" and "imaginary" part that are like the x and y parts of a 2D vector. For example, say you had a list of just 8 points that made up your water's surface. Using the FFT would look something like this:~~
+Some important details you maybe didn't figure out by experimenting: The FFT always produces the same number of inputs as outputs. Do you remember solving sets of equations in algebra? You always needed the same number of equations as the number of "unknowns". This is _exactly_ the same thing, but it's still neat to know that a sequence of numbers can be substituted for the same number of waves. The second half of the waves are backwards. It's actually much more complicated than that, but simulating waves doesn't require you to know about that! The wavelengths the FFT uses are very predictable. The 2nd and last wave have a wavelength of _N/2_ (where N is the length of the sequence). The 3rd and 2nd to last waves have a wavelength of _N/2_, and so on until you get to the shortest wave in the middle(ish...) with a wavelength of 2 or _N/(N/2)_. The 1st wave is just the average of all the water. Think of it as having a wavelength of infinity or _N/0_.
 
-
-~~The output numbers are also complex numbers, they represent the sines and cosines of the waves. Think of it like a 2D vector again. The length of the vector is the wave's amplitude, and the angle it points in is the wave's phase.~~
-
-~~To use the FFT in 3D, you would apply it to the rows of the grid first. Then apply it to the columns. (or the other way around, the order doesn't matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but surprisingly the FFT is a separable linear transform which means you can take that computational shortcut!~~
-
-~~Finally, the inverse FFT is the exact opposite. You give it a list of N complex numbers describing the waves, and it gives you back N numbers with the height and velocity of each wave. No surprises.~~
+To use the FFT for 3D water, you would apply it to the rows of the grid first, then apply it to the columns. (the order doesn't actually matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but that's how it works. The FFT is a [separable filter](https://en.wikipedia.org/wiki/Separable_filter) so you can take this nice computational shortcut.
 
 # Animating Water with the FFT
 
-Enough explanations! We already know how to make waves by animating some sines and cosines, and we have a magic algorithm that can calculate a lot of sines and cosines efficiently. Lets put the two together and animate some waves!
+Time to dive into another example. If we make a list of waves, animate their phases, and pass them to the inverse FFT we should get a nice water animation. The gray bars are the amplitudes of the waves we will use (there are now 64 of them). The FFT defines the wavelengths for us, so all we need to do is make them move at the right speed by changing their phase. Earlier we figured out the phase rate should be `-time/sqrt(wavelength)`. With the FFT the wavelength = 1/i where i is the 0 based index of the wave. If we substitute that in, we get `-time*sqrt(i)`. Remember that the waves are defined by complex numbers, and we need to add our phase to theirs. Complex multiplication adds angles and multiplies lengths, so we just need to make a complex number with a length of 1 and the angle we want, and multiply by that. For now we are going to ignore the "backwards" waves and only process the first half. Enough words, demo time!
 
 <canvas id="fft1-waves" style="border:solid 1px #0002;"></canvas>
 
-<textarea id="fft1-code" rows="8" style="width:100%; font-size:125%" spellcheck="false">
-for(let i = 0; i < waves.n; i++){
+<textarea id="fft1-code" rows="7" style="width:100%; font-size:125%" spellcheck="false">
+for(let i = 0; i <= waves.n/2; i++){
   let phase = -time*sqrt(i)
   let phase_complex = complex(cos(phase), sin(phase));
-  waves[i] = complex_multiply(phase_complex, waves[i])
+  waves[i] = complex_multiply(waves[i], phase_complex);
 }
-water = inverse_fft(waves)
+water = inverse_fft(waves);
 </textarea>
 <pre id="fft1-error" hidden="true"></pre>
 
@@ -770,21 +779,20 @@ water = inverse_fft(waves)
 const COMPLEX_ARRAY_PROXY = {
 	get: (arr, idx) => arr[idx] || lifft_complex(arr.re[idx], arr.im[idx]),
 	set: (arr, idx, val) => {
-		arr.re[idx] = val.re
-		arr.im[idx] = val.im
-		return true
+		[arr.re[idx], arr.im[idx]] = [val.re, val.im];
+		return true;
 	},
 };
 
-const SPECTRA = lifft_complex_arr(64), phases = []
+const SPECTRA = lifft_complex_arr(64), phases = [];
 for(let i = 0; i < SPECTRA.n; i++){
-	SPECTRA.re[i] = AMPLITUDES[i] || 0
-	phases[i] = 2*Math.PI*Math.random()
+	SPECTRA.re[i] = AMPLITUDES[i] || 0;
+	phases[i] = 2*Math.PI*Math.random();
 }
 
 new Widget("fft1-waves", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	function compile(code){
 		return Function(
@@ -797,105 +805,116 @@ new Widget("fft1-waves", widget => {
 				${code}
 				return water
 			`
-		)
+		);
 	}
 
-	const code_area = document.getElementById("fft1-code")
-	let func = compile(code_area.value)
+	const code_area = document.getElementById("fft1-code");
+	let func = compile(code_area.value);
 	code_area.oninput = (e => {
-		const output = document.getElementById("fft1-error")
+		const output = document.getElementById("fft1-error");
 		try {
-			const f = compile(code_area.value)
-			f(0, lifft_complex_arr(SPECTRA.n))
-			func = f
-			output.hidden = true
+			const f = compile(code_area.value);
+			f(0, lifft_complex_arr(SPECTRA.n));
+			func = f;
+			output.hidden = true;
 		} catch(err) {
-			console.error(err)
-			output.hidden = false
-			output.textContent = err
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
 		}
-	})
+	});
 	
 	return function(t){
 		// Init spectra with SPECTRA*phases.
-		const spectra = lifft_complex_arr(SPECTRA.n)
+		const spectra = lifft_complex_arr(SPECTRA.n);
 		for(let i = 0; i < SPECTRA.n; i++){
 			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
-			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
-			spectra.re[i] = p.re
-			spectra.im[i] = p.im
+			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]));
+			[spectra.re[i], spectra.im[i]] = [p.re, p.im];
 		}
 		
-		const water = func(4*t, spectra)
+		const water = func(4*t, spectra);
 		
-		const scale = canvas.width/(water.n - 1)
+		const scale = canvas.width/(water.n - 1);
 		
-		ctx.setTransform(canvas.width/water.n, 0, 0, -5, 0, canvas.height)
-		const {x:mx, y:my} = widget.mlocal
-		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
-		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
+		ctx.setTransform(canvas.width/water.n, 0, 0, -5, 0, canvas.height);
+		const {x:mx, y:my} = widget.mlocal;
+		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)));
+		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2;
 		
-		if(widget.mleft) SPECTRA.re[mi] = my/(mi == 0 ? 1 : Math.abs(mi_signed))
-		if(widget.mright) SPECTRA.re[mi] = 0
+		if(widget.mleft) SPECTRA.re[mi] = my/(mi == 0 ? 1 : Math.abs(mi_signed));
+		if(widget.mright) SPECTRA.re[mi] = 0;
 		
 		for(let i = 0; i < SPECTRA.n; i++){
-			ctx.fillStyle = i == mi ? "#0F04" : "#0002"
-			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))
+			ctx.fillStyle = i == mi ? "#0F04" : "#0002";
+			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i));
 			ctx.fillRect(i, 0, 0.9, weight*SPECTRA.re[i]);
 		}
 		
-		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
-		for(let i = 0; i < water.n; i++) ctx.lineTo(i - water.im[i], water.re[i])
-		ctx.stroke()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
+		for(let i = 0; i < water.n; i++) ctx.lineTo(i - water.im[i], water.re[i]);
+		ctx.stroke();
 		
-		ctx.fillStyle = "#0008"
-		ctx.textAlign = "center"
-		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height)
-		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0)
+		ctx.fillStyle = "#0008";
+		ctx.textAlign = "center";
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height);
+		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0);
 		
 		if(widget.mfocus){
-			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height)
-			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0)
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height);
+			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0);
 		}
 	}
 })
 </script>
 
-That looks pretty good to my eyes. With all the wavefronts passing one another it looks almost random, but yet it's _entirely_ predcitable. The waves that make up the water always have the same amplitude, and only their phase is shifted to the current time using the same method as the simpler waves from earlier. The only difference is now there are over a dozen waves instead of just two. Lets look at some psuedo-code:
+Edit this code!
+{: style="text-align: center"}
 
-TODO Waves moving backwards are broken though
+* Experiment with the wave speed factor.
+* Can you make the waves move the same speed?
+* Can you make the waves move to the left?
+* What happens if you negate the sin() or cos()? Do you know why?
+* What happens if you replace the sin() or cos() with zero?
+* What happens if you change the loop condition to `i < waves.n` and add backwards waves?
+
+This looks quite nice to my eyes. The wave heights and spacing are all different and always changing. It looks random yet it's _entirely_ predictable, and the model for it is simple even. We can trivially predict what the water will look like at any time with 5 lines of code! It's effectively the same method we used with 2 waves, but now with potentially dozens of waves. The way it's drawn is basically the same too. The "real" water values have the sum of the cosines, and the "imaginary" values have the sines.
+
+This simplification does lead to a problem though if you want waves going both directions. This doesn't really matter for ocean waves, but it's crucial if you want to do a simulation. As any splash will cause waves to move outwards in both directions. The first issue is that the waves come in pairs of wavelengths, so we need to process their phases together. The second issue is that the convenient re-use of the water velocity (the "imaginary" part) as the x-coord of the trochoidal motion only works for forwards moving waves. It makes the trochoidal shape upside down for backwards moving waves. Bah! Well at least we can get rid of that pesky negative sign in the _x&nbsp;-&nbsp;sin(...)_ drawing code now. Instead we will need to calculate a second FFT for the x-coord of the trochoidal motion. Fortunately the motion is very similar in x and y. For forward moving waves it's 90° behind, and for backwards moving waves it's 90° ahead. All we need to do is flip some coordinates to do that. Now when drawing the wave, we use the "real" parts of the water_x and water_y sequences instead.
 
 <canvas id="fft2-waves" style="border:solid 1px #0002;"></canvas>
 
 <textarea id="fft2-code" rows="16" style="width:100%; font-size:125%" spellcheck="false">
 for(let i = 0; i <= waves.n/2; i++){
-  let phase = -time*sqrt(i)
+  let phase = -time*sqrt(i);
   let phase_complex = complex(cos(phase), sin(phase));
   
-  let p = complex_multiply(phase_complex, waves[i]);
+  let p = complex_multiply(waves[i], phase_complex);
   waves_x[i] = complex(-p.im, p.re);
   waves_y[i] = p;
   
-  let j = (waves.n - i) % waves.n
-  let q = complex_multiply(phase_complex, waves[j])
-  waves_x[j] = complex(q.im, -q.re)
-  waves_y[j] = q
+  let j = (waves.n - i) % waves.n;
+  let q = complex_multiply(waves[j], phase_complex);
+  waves_x[j] = complex(q.im, -q.re);
+  waves_y[j] = q;
 }
-water_x = inverse_fft(waves_x)
-water_y = inverse_fft(waves_y)
+water_x = inverse_fft(waves_x);
+water_y = inverse_fft(waves_y);
 </textarea>
 <pre id="fft2-error" hidden="true"></pre>
 
+Edit this code!
+{: style="text-align: center"}
+
 <script>'use strict';
 new Widget("fft2-waves", widget => {
-	const {canvas, ctx} = widget
-	canvas.height = canvas.width/4
-	
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
 	
 	function compile(code){
 		return Function(
@@ -911,75 +930,76 @@ new Widget("fft2-waves", widget => {
 				${code}
 				return [water_x, water_y]
 			`
-		)
+		);
 	}
 
-	const code_area = document.getElementById("fft2-code")
-	let func = compile(code_area.value)
+	const code_area = document.getElementById("fft2-code");
+	let func = compile(code_area.value);
 	code_area.oninput = (e => {
-		const output = document.getElementById("fft2-error")
+		const output = document.getElementById("fft2-error");
 		try {
-			const f = compile(code_area.value)
-			f(0, lifft_complex_arr(SPECTRA.n))
-			func = f
-			output.hidden = true
+			const f = compile(code_area.value);
+			f(0, lifft_complex_arr(SPECTRA.n));
+			func = f;
+			output.hidden = true;
 		} catch(err) {
-			console.error(err)
-			output.hidden = false
-			output.textContent = err
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
 		}
 	})
 	
 	return function(t){
 		// Init spectra with SPECTRA*phases.
-		const spectra = lifft_complex_arr(SPECTRA.n)
+		const spectra = lifft_complex_arr(SPECTRA.n);
 		for(let i = 0; i < SPECTRA.n; i++){
 			const w = lifft_complex(Math.cos(phases[i]), Math.sin(phases[i]));
-			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]))
-			const j = -i & (SPECTRA.n - 1)
-			spectra.re[j] = p.re
-			spectra.im[j] = p.im
+			const p = lifft_cmul(w, lifft_complex(SPECTRA.re[i], SPECTRA.im[i]));
+			const j = -i & (SPECTRA.n - 1);
+			[spectra.re[j], spectra.im[j]] = [p.re, p.im];
 		}
 		
-		const [water_x, water_y] = func(4*t, spectra)
+		const scale = canvas.width/(spectra.n - 1);
+		const [water_x, water_y] = func(4*t, spectra);
 		
-		const scale = canvas.width/(spectra.n - 1)
+		ctx.setTransform(canvas.width/spectra.n, 0, 0, -5, 0, canvas.height);
+		const {x:mx, y:my} = widget.mlocal;
+		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)));
+		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2;
 		
-		ctx.setTransform(canvas.width/spectra.n, 0, 0, -5, 0, canvas.height)
-		const {x:mx, y:my} = widget.mlocal
-		const mi = Math.floor(Math.max(0, Math.min(mx, SPECTRA.n - 1)))
-		const mi_signed = (mi ^ SPECTRA.n/2) - SPECTRA.n/2
-		
-		if(widget.mleft) SPECTRA.re[-mi & (SPECTRA.n - 1)] = my/(mi == 0 ? 1 : Math.abs(mi_signed))
-		if(widget.mright) SPECTRA.re[-mi & (SPECTRA.n - 1)] = 0
+		if(widget.mleft) SPECTRA.re[-mi & (SPECTRA.n - 1)] = my/(mi == 0 ? 1 : Math.abs(mi_signed));
+		if(widget.mright) SPECTRA.re[-mi & (SPECTRA.n - 1)] = 0;
 		
 		for(let i = 0; i < SPECTRA.n; i++){
-			const j = -i & (SPECTRA.n - 1)
-			ctx.fillStyle = j == mi ? "#0F04" : "#0002"
-			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i))
+			const j = -i & (SPECTRA.n - 1);
+			ctx.fillStyle = j == mi ? "#0F04" : "#0002";
+			const weight = i == 0 ? 1 : (SPECTRA.n/2 - Math.abs(SPECTRA.n/2 - i));
 			ctx.fillRect(j, 0, 0.9, weight*SPECTRA.re[i]);
 		}
 		
-		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2)
-		ctx.lineCap = ctx.lineJoin = "round"
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
-		ctx.lineWidth = 3/scale
-		ctx.strokeStyle = "#0CF"
-		ctx.beginPath()
-		for(let i = 0; i < spectra.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i])
-		ctx.stroke()
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
+		for(let i = 0; i < spectra.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i]);
+		ctx.stroke();
 		
-		ctx.fillStyle = "#0008"
-		ctx.textAlign = "center"
-		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height)
-		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0)
+		ctx.fillStyle = "#0008";
+		ctx.textAlign = "center";
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height);
+		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0);
 		
 		if(widget.mfocus){
-			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height)
-			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0)
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.75*canvas.height);
+			ctx.fillText(`Wavelength: ${(1/mi_signed).toPrecision(2)}, Amplitude: ${SPECTRA.re[mi].toPrecision(1)}`, 0, 0);
 		}
 	}
 })
 </script>
+
+* Try adding both forwards and backwards moving waves.
+* Try experimenting with the `waves_x` values to see how it changes the wave shapes.
 
 ## Extending Into Simulation
