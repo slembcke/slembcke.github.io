@@ -1,9 +1,9 @@
 ---
 layout: post
-title: "Wave Simulation"
-description: "Wave Simulation with FFTs."
+title: "Water Wave Simulation"
+description: "Water wave animation and simulation using FFTs."
 date: 2022-12-20
-permalink: WaveSim
+permalink: WaterWaves
 ---
 
 <script src="js/lifft.js" /></script>
@@ -89,7 +89,7 @@ People _love_ water in video games. I can't count the number of times I've heard
 Water in Half Life 2 and Subnautica.
 {: style="text-align: center"}
 
-Rendering and animating water are both pretty big topics, so this article is going to detail a particular algorithm for procedurally animating interactive water waves. Something like this!
+Rendering and animating water are both pretty big topics, so this article is going to detail an algorithm for procedurally simulating interactive water waves using FFTs. Something like this!
 
 <canvas id="wavies" style="border:solid 1px #0002;"></canvas>
 
@@ -214,11 +214,11 @@ new Widget("wavies", widget => {
 })
 </script>
 
-The algorithm itself extends to 3D easily enough, though I'll be doing it in 2D so it's easier to make quick visualizations.
+Keep in mind that it's a just surface simulation, so horizontal mouse movements faster than the wave speed won't be very satisfying. ;) The algorithm itself extends to 3D easily enough, though I'll be doing it in 2D so it's easier to make quick visualizations.
 
 ## Lots of Water Algorithms
 
-There's actually quite a lot of algorithms for simulating water. One of the simplest is to treat the water surface like a grid. For each cell you store the height and vertical velocity so you can simulate the motion. To step time forward you just apply the velocity to the position as normal, then also feed the position back into the velocity (when the water level is high, it wants to accelerate back down, etc). This makes the water bob up and down, but to make the waves propagate you just average each cell with it's neighbors. This simple filtering method is pretty effective and very fast! To interact with the water, you just need to change the height or velocity. It does have it's issues though. For one, it's difficult to make framerate independent as the waves move the same amount each step. It also doesn't _quite_ move like water waves.
+There's actually quite a lot of algorithms for simulating water. One of the simplest is to treat the water surface like a grid. For each cell you store the height and vertical velocity so you can simulate the motion. To step time forward you move the height with the velocity, then feed the height back into the velocity (when the water level is high it wants to accelerate back down, and vice versa). This makes the water bob up and down. To make the waves propagate you just need to average each cell with it's neighbors. This easy filtering method is pretty effective and very fast! To interact with the water, you just change the height or velocity values. Though delightfully simple to implement, it does have it's issues though. For one, it's difficult to make framerate independent as the waves will move the same amount each step. It also doesn't _really_ move like water waves for a few reasons.
 
 ![Water ripples in Metroid Prime](images/waves/metroid-water.jpg)
 {: style="text-align: center"}
@@ -226,29 +226,39 @@ There's actually quite a lot of algorithms for simulating water. One of the simp
 Interactive water ripples in Metroid Prime
 {: style="text-align: center"}
 
-This is where fourier based water simulation comes in using Fast Fourier Transforms, or FFTs. It lets you use much fancier filtering without too much extra cost, and it even makes it pretty intuitive. Instead of treating the grid like just a bunch of locations that has waves in it somehow, it lets you treat a bunch of different waves like they exist in a grid somehow. This makes it easier to handle some of the unique characteristics that make water look like water. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves, and that gives water it's unique pulsing look as different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented this technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but a bit light on details perhaps. That's what I'd like to fill in with this article.
+This is where fourier based water simulation comes in using Fast Fourier Transforms, or FFTs. It gives you an intuitive way to perform much fancier filtering, and without a lot of extra cost! Instead of treating the grid like a bunch of locations that have waves in them somehow, the fourier transform lets you convert the grid to a list of waves, and then back into a grid. This makes it easier to handle some of water's unique characteristics. For example, unlike sound or light, water waves don't all move at the same speed. Long waves move faster than little waves giving water it's unique pulsing look as the different waves interact in complicated ways. Jump Trajectory has a nice overview video about how they [implemented the FFT technique](https://www.youtube.com/watch?v=kGEqaX4Y4bQ) in Unity. It's an excellent video, but it's light on the details and assumes you already know how FFTs work. That's what I'd like to fill in with this article.
 
 ![Ocean waves in Assasin's Creed](images/waves/acbf-water.jpg)
 {: style="text-align: center"}
 
-FFT based ocean in Assasin's Creed
+FFT based ocean waves in Assasin's Creed
 {: style="text-align: center"}
 
-At the other end of the spectrum, there is full blown fluid dynamics. Don't just approximate the water's surface. Treat it like a real fluid with volume. This produces the best looking water as waves can crest and fall over and splash, or can even flow across surfaces. Unsurprisingly, it's also the most expensive method as it adds an entire dimension to be simulated! While I've never implemented proper fluid dynamics myself, it really doesn't look all that hard. Ten Minute Physics recently posted a video on [implementing the FLIP algorithm](https://youtu.be/XmzBREkK8kY) in 2D. It looks rather fun! There's also a neat library for 2D fluid simulation using particles based on Box2D called [Liquid Fun](https://google.github.io/liquidfun/).
+At the extreme end of the spectrum, you can simulate the whole volume of water using fluid dynamics instead of just approximating it's surface. Waves can crest and fall over, they can splash, and the water can even pour across surfaces. Unsurprisingly, adding another dimension is _really_ expensive and simulating the whole volume usually isn't feasible except at low resolutions. While I've never implemented proper fluid dynamics myself, it really doesn't look all that hard. Ten Minute Physics recently posted a video on [implementing the FLIP algorithm](https://youtu.be/XmzBREkK8kY) in 2D. It looks surprisingly simple and fun! There's also a neat 2D fluid simulation library based on Box2D called [Liquid Fun](https://google.github.io/liquidfun/).
+
+![Water simulated using the FLIP algorithm](images/waves/10minute-water.jpg)
+{: style="text-align: center"}
+
+A fluid simulationg using the FLIP algorithm from the 10 Minute Physics [blog](https://matthias-research.github.io/pages/tenMinutePhysics/index.html)
+{: style="text-align: center"}
 
 ## A Quick Water Wave Primer
 
-The first thing to know about waves (or almost any periodic motion) is that it's just energy that's stuck in a loop. In the case of water, it's energy bounces back between kinetic and potential energy. When the water is high, gravity pulls it down. It picks up speed and overshoots, going too far down. Then the pressure of the water around it pushes it back up. It overshoots again, and goes too high. Rinse and repeat. (pun intended)
+The first thing to know about waves (or almost any periodic motion really) is that it's just energy that's stuck in a loop. In the case of water, it's energy bounces back between kinetic and potential energy. When the water is high, gravity pulls it down. It picks up speed and overshoots, going too far down. Then the pressure of the water around it pushes it back up. It overshoots again, and goes too high. Rinse and repeat. (pun intended)
 
 ![Wave cycle](images/waves/wave-cycle.svg)
+{: style="text-align: center"}
 
-# A Simple Wave
+A [phase plot](https://en.wikipedia.org/wiki/Phase_space#Phase_plot) of the water surface
+{: style="text-align: center"}
 
-Let's start with a simple wave model: a sine wave. (I swear there will be very little trigonometry involved in this article) You'll probably remember that `sin(x)` gives you a nice wobbly line. If you want to animate it, you just need to change the phase using time: `sin(x - time)`. That produces a nice little animated wave like this one.
+# The Simplest Wave
+
+Let's start with a simple wave model: a sine wave. (I swear there will be very little trigonometry involved in this article.) You'll probably remember that `y = sin(x)` gives you a nice wobbly line. If you want to animate it, you just need to change the phase using time: `y = sin(x - time)`. That produces a nice little animated wave that moves left to right like this one.
 
 <canvas id="simple-wave" style="border:solid 1px #0002;"></canvas>
 
-A simple animated wave.
+A simple animated wave
 {: style="text-align: center"}
 
 <script>'use strict';
@@ -266,7 +276,6 @@ new Widget("simple-wave", widget => {
 		ctx.strokeStyle = "#888"
 		ctx.beginPath()
 		ctx.moveTo(-100, 0); ctx.lineTo(+100, 0)
-		ctx.moveTo(0, -100); ctx.lineTo(0, +100)
 		ctx.stroke()
 		
 		// Draw velocity
@@ -313,9 +322,21 @@ new Widget("simple-wave", widget => {
 })
 </script>
 
-For reasons of simplicity the blue water line is actually `cos(x - time)`. That way we can plot the vertical velocity of the wave with `sin(x - time)`. It doesn't really matter, but setting it up this way lets you drop some pesky negative signs. Does this look like a water wave? Well... not really. For one, the shape is wrong. Real water waves have pointy peaks and flat troughs. The reason for this is because the surface of the water doesn't just move up and down, it actually moves in a circular shape. These are is called a [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) or gerstner waves. That's easy enough. If we add `cos(x - time)` to the wave's y position, then we just need to subtract `sin(x - time)` from the x position.
+If the blue line is the water height, can you guess what the red line is? (Hint: watch the red arrow.) It's the water's vertical velocity. When the velocity is up it makes the height move up, and when the height is up it makes the velocity move down. Another way of looking at it is that the velocity wave pulls the height wave. If you swapped their positions it would make the wave move to the right instead. The velocity will be important later when we talk about simulating waves, but for now let's take a shortcut and just animate them.
 
 # A Better Wave
+
+So then, does this animated sine wave look like a water wave? Well... not really. First of all, if you compare it to the waves in the Assasin's Creed screenshot above, it's the wrong shape. Those waves have pointy peaks and wide troughs. The reason for this is because real water waves don't just bob up and down, they _roll_ in roughly circlular path. This is called a [trochoidal](https://en.wikipedia.org/wiki/Trochoidal_wave) wave (sometimes called gerstner waves in computer graphics stuff). That's easy enough! Instead of just moving the vertexes up and down, we add something to move them back and forth too. While we are making changes, lets make add a wavelength and amplitude property. Now our height is:
+
+`y = amplitude*sin(x/wavelength - time)`
+
+(_Technically_ you need π represented in there for the wavelength, but if you don't care about using real units, then it doesn't matter.)
+
+Each time a wave finishes a cycle, it moves forward by one wavelength. This is a mild problem because longer waves will move faster. If we want our waves to move at the same speed, then we need to slow down waves proportionally by their wavelength. Easy enough, just divide time to slow it down:
+
+`y = amplitude*sin(x/wavelength - time/wavelength)`
+
+Also for reason we'll get into later when we talk about FFTs, let's swap that for a cosine instead. Lastly, since we are talking about circles, there's surely a matched pair of sines and cosines involved. So the final trochoidal wave code would look something like this:
 
 <canvas id="better-wave" style="border:solid 1px #0002;"></canvas>
 <div style="display:flex; align-items:center; column-gap:1em">
@@ -324,12 +345,15 @@ For reasons of simplicity the blue water line is actually `cos(x - time)`. That 
 		<option value="trochoidal">Trochoidal Wave</option>
 		<option value="sine">Sine Wave</option>
 	</select>
-	<label>Wavelength:</label> <input type="range" value="-0.5" min="-1.5" max="0.5" step="0.01" id="better-wave-wavelength"/>
-	<label>Amplitude:</label> <input type="range" value="1" min="0" max="2" step="0.01" id="amplitude"/>
+	<label>Wavelength:</label> <input type="range" style="width:120px" value="-0.5" min="-1.5" max="0.5" step="any" id="better-wave-wavelength"/>
+	<label>Amplitude:</label>  <input type="range" style="width:120px" value=" 1.0" min=" 0.0" max="2.0" step="any" id="better-wave-amplitude" />
 </div>
 
-<textarea id="better-wave-code" rows="5" style="width:100%; font-size:125%" spellcheck="false"></textarea>
+<textarea id="better-wave-code" rows="4" style="width:100%; font-size:125%" spellcheck="false"></textarea>
 <pre id="better-wave-error" hidden="true"></pre>
+
+Edit this code!
+{: style="text-align: center"}
 
 <script>'use strict';
 new Widget("better-wave", widget => {
@@ -338,12 +362,12 @@ new Widget("better-wave", widget => {
 	
 	const EXAMPLE = {
 		trochoidal: (
-			"let phase = x/wavelength - time;\n" +
+			"let phase = x/wavelength - time/wavelength;\n" +
 			"x_out = x - amplitude*sin(phase);\n" +
 			"y_out = amplitude*cos(phase);\n"
 		),
 		sine: (
-			"y_out = amplitude*cos(x/wavelength - time);\n"
+			"y_out = amplitude*cos(x/wavelength - time/wavelength);\n"
 		),
 	}
 	
@@ -385,7 +409,7 @@ new Widget("better-wave", widget => {
 	})
 	
 	const wavelength_slider = document.getElementById("better-wave-wavelength")
-	const amplitude_slider = document.getElementById("amplitude")
+	const amplitude_slider = document.getElementById("better-wave-amplitude")
 	
 	return function(t){
 		const n = 20, scale = canvas.width/(n - 1)
@@ -401,13 +425,14 @@ new Widget("better-wave", widget => {
 		
 		const wavelength = n*Math.exp(wavelength_slider.value)*0.5/Math.PI
 		const amplitude = 0 + amplitude_slider.value
+		const time = 4*t
 		
 		// Draw spokes
 		ctx.lineWidth = 1/scale
 		ctx.strokeStyle = "#0002"
 		ctx.beginPath()
 		for(let i = -n/2; i <= n/2; i++){
-			const [x, y] = func(i, t, amplitude, wavelength)
+			const [x, y] = func(i, time, amplitude, wavelength)
 			ctx.moveTo(i, 0); ctx.lineTo(x, y)
 		}
 		ctx.stroke()
@@ -417,12 +442,12 @@ new Widget("better-wave", widget => {
 		ctx.strokeStyle = "#0CF"
 		ctx.beginPath()
 		for(let i = -n; i < n; i++){
-			const [x, y] = func(i, t, amplitude, wavelength)
+			const [x, y] = func(i, time, amplitude, wavelength)
 			ctx.lineTo(x, y)
 		}
 		ctx.stroke()
 		
-		const [x0, y0] = func(0, t, amplitude, wavelength)
+		const [x0, y0] = func(0, time, amplitude, wavelength)
 		
 		// Draw circle
 		ctx.strokeStyle = "#F004"
@@ -440,9 +465,36 @@ new Widget("better-wave", widget => {
 })
 </script>
 
-This is starting to look much better, though with one a single wave frequency mixed in in looks pretty boring as it simply scrolls from one side of the screen to the other. Something that makes water interesting is that longer waves actually travel faster than short waves. (Imagine how weird it would be if sound or light worked that way!) Specifically, a wave's speed is inversely proportional to the square root of it's wavelength. To demonstrate, let's plot a second red wave with 1/4x the wavelength moving 1/2x as fast. The math for this works out to be `cos(x*4 - sqrt(4)*time)`.
+* What happens if you add time instead of subtracting it?
+* What happens if you add the sine to the x coordinate instead of subtracting it?
+* What happens if you swap the sine and cosine? Can you change the speed of the wave?
+
+Lastly, if you didn't _immediately_ crank the wavelength and amplitude to their extremes, try it! If the ratio of the amplitude compared to the wavelength is too high, the trochoidal motion breaks down. A real wave would fall over and turn turbulent, turning it into a "breaking wave". We can sort of deal with this in our simple surface simulation, but you need real fluid dynamics to do it properly.
+
+![example of a breaking wave](images/waves/wave-break.jpg)
+{: style="text-align: center"}
+
+By Steve Jurvetson from Menlo Park, USA - Step Into Liquid, CC BY 2.0, [link](https://commons.wikimedia.org/w/index.php?curid=3561785)
+{: style="text-align: center"}
+
 
 # Mixing Waves
+
+This is starting to look much better, but our trochoidal wave with a single wavelength is still really plain. Real waves are never quite quite the same size, and their pattern is a little irregular too. Does that mean you need to use random numbers? Perhaps surprisingly, no. Real water waves are almost always a composite of many simpler waves just like ours above. Individually they move in extremely predictable ways, but when mixed together they can look almost random.
+
+Water waves have a trick that helps with this random appearance too. Unlike sound or light, water waves don't all move at the same speed. (Think about how weird that is for a second...) Specifically, a wave's speed is proportional to the square root of it's wavelength, so we just need to multiply that into our time factor like this:
+
+```
+y = amplitude*cos(x/wavelength - time*sqrt(wavelength)/wavelength)
+```
+
+Which simplifies to:
+
+```
+y = amplitude*cos(x/wavelength - time/sqrt(wavelength))
+```
+
+If we plot these waves separately, you can see that the blue wave has 4x the wavelength of the red wave, and moves 2x as fast. At least to my eyes, this looks... impossible. I still have a hard time accepting that water waves move like this, but apparently they do!
 
 <canvas id="two-waves" style="border:solid 1px #0002;"></canvas>
 
@@ -471,7 +523,7 @@ new Widget("two-waves", widget => {
 		ctx.strokeStyle = "#F00"
 		ctx.beginPath()
 		for(let i = -n; i < n; i++){
-			const phase = i/2 - t*10/Math.sqrt(2)
+			const phase = i/2 - t*10/(2/Math.sqrt(2))
 			ctx.lineTo(i - 0.5*Math.sin(phase), 0.5*Math.cos(phase))
 		}
 		ctx.stroke()
@@ -479,7 +531,7 @@ new Widget("two-waves", widget => {
 })
 </script>
 
-When plotted separately it looks... weird. It did not seem intuitive to me that the wave speeds could vary that much, but I was wrong! That's what gives water it's pulsating look as the peaks of the waves mix together when moving past one another. Just look at how watery the next wave looks when mixing the two wave offsets together and speeding time up to a normal amount. Lovely!
+Mixing waves together is easy, you just add them together. In the case of trochoidal waves, you just add up all the cosines for the vertical position and all the sines for the horizontal offsets. Once you do that, you'll get a lovely wave with that signature "pulsing" look that real water waves get. Give it a try!
 
 <canvas id="mixed-waves" style="border:solid 1px #0002;"></canvas>
 
@@ -487,14 +539,17 @@ When plotted separately it looks... weird. It did not seem intuitive to me that 
 x_out = x, y_out = 0;
 
 let amp0 = 3.0, len0 = 8;
-x_out -= amp0*Math.sin(x/len0 - time/sqrt(len0));
-y_out += amp0*Math.cos(x/len0 - time/sqrt(len0));
+x_out -= amp0*sin(x/len0 - time/sqrt(len0));
+y_out += amp0*cos(x/len0 - time/sqrt(len0));
 
 let amp1 = 0.5, len1 = 2;
-x_out -= amp1*Math.sin(x/len1 - time/sqrt(len1));
-y_out += amp1*Math.cos(x/len1 - time/sqrt(len1));
+x_out -= amp1*sin(x/len1 - time/sqrt(len1));
+y_out += amp1*cos(x/len1 - time/sqrt(len1));
 </textarea>
 <pre id="two-wave-error" hidden="true"></pre>
+
+Edit this code!
+{: style="text-align: center"}
 
 <script>'use strict';
 new Widget("mixed-waves", widget => {
@@ -547,7 +602,12 @@ new Widget("mixed-waves", widget => {
 })
 </script>
 
-Mixing two waves looks so nice, you'd be correct to think that mixing more waves would make it look even better. The problem is how many do you need to mix? For each additional wave you need to calculate a whole lot more sines and cosines. Lets not even mention the 3D case where you might find yourself calculating a whole grid of wave directions for each wave for each grid point. Vertex shaders are fast, but not that fast! Also, wasn't this supposed to be an article about interactive water? How on earth do you interact with sine waves!?
+* Try different wavelengths
+* Try dividing by wavelength like before instead of it's square root
+* Can you cause the wave to break by adding smaller waves that are fine independently?
+* What happens if you pick wavelengths that are similar?
+
+If Mixing two waves looks so nice, you'd be correct to think that mixing more waves would make it look even better. The problem is how many do you need? For each additional wave you need to calculate a whole lot more sines and cosines. It gets even worse when you need to do this in 3D. CPUs and GPUs are insanely fast, but at some point brute forcing a problem won't work. Also, wasn't this supposed to be an article about interactive water simulation? How on earth do you interact with sine waves!?
 
 ## Mix All the Waves!
 
@@ -555,41 +615,10 @@ Since you already know that this article is about using the FFT to simulate wate
 
 # The FFT Algorithm
 
-The Fast Fourier Transform is an algorithm that can take a grid of N numbers that describe the water's surface (height and velocity), and turns it into a complete list of N sines and cosines for all the various sized waves present. It's companion, the inverse FFT, can take a list of sines and cosines and turn it back into the height and velocity. As it's name suggests, it's very fast. How the FFT works is beyond the scope of this article, but you should be able to find an FFT library for basically any programming language.
-
-The FFT has a couple of quirks. First, it treats it's input as if it's repeating. This is extremely handy if you want a result that is tileable. If you don't, then you'll need to leave some dead space at the edges where you can clamp the waves down to zero to prevent them from wrapping around. Another quirk is that the size of the input has to be a power of two (2, 4, 8, 16, etc). It's possible to work around that, but it's much easier to just work with the limitation.
-
-The input and output of the FFT is fairly straightforward too once you see the pattern. It does use complex numbers, but don't worry if that gives you dread. The scrolling waves above already used them, and that's kinda all you need to know. Complex numbers have a "real" and "imaginary" part that are like the x and y parts of a 2D vector. For example, say you had a list of just 8 points that made up your water's surface. Using the FFT would look something like this:
-
-```python
-# The input is 8 complex numbers
-water_input = [
-	complex_number(height[0], velocity[0]),
-	complex_number(height[1], velocity[1]),
-	...
-	complex_number(height[7], velocity[7]),
-]
-
-wave_output = fft(water_input)
-
-# The output is the same number of complex numbers.
-wave_output[0] # The average height/velocity of the water
-wave_output[1] # The wave that has length grid_size/1
-wave_output[2] # The wave that has length grid_size/2
-wave_output[3] # The wave that has length grid_size/3
-wave_output[4] # The wave that has length grid_size/4
-wave_output[5] # The wave that has length grid_size/3, but moves backwards
-wave_output[6] # The wave that has length grid_size/2, but moves backwards
-wave_output[7] # The wave that has length grid_size/1, but moves backwards
-```
-
-The output numbers are also complex numbers, they represent the sines and cosines of the waves. Think of it like a 2D vector again. The length of the vector is the wave's amplitude, and the angle it points in is the wave's phase.
-
-To use the FFT in 3D, you would apply it to the rows of the grid first. Then apply it to the columns. (or the other way around, the order doesn't matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but surprisingly the FFT is a separable linear transform which means you can take that computational shortcut!
-
-Finally, the inverse FFT is the exact opposite. You give it a list of N complex numbers describing the waves, and it gives you back N numbers with the height and velocity of each wave. No surprises.
-
 <canvas id="fft-io" style="border:solid 1px #0002;"></canvas>
+
+Use the left mouse button to change values, or right mouse button to clear them.
+{: style="text-align: center"}
 
 <script>'use strict';
 new Widget("fft-io", widget => {
@@ -601,7 +630,7 @@ new Widget("fft-io", widget => {
 	function calc_input(){input = lifft_inverse_complex(output)}
 	function calc_output(){output = lifft_forward_complex(input)}
 	
-	output.im[1] = -1
+	output.im[1] = -0.7
 	calc_input()
 	
 	function draw_bars(x, y, centered, f){
@@ -660,10 +689,10 @@ new Widget("fft-io", widget => {
 	}
 	
 	return function(t){
-		draw_bars(0.2, 0.25, true, i => 2*input.re[i])
-		mouse_input(-1, (i, v) => {input.re[i] = v/2; calc_output()})
-		draw_bars(0.2, 0.75, true, i => 2*input.im[i])
-		mouse_input(-1, (i, v) => {input.im[i] = v/2; calc_output()})
+		draw_bars(0.2, 0.25, true, i => 4*input.re[i])
+		mouse_input(-1, (i, v) => {input.re[i] = v/4; calc_output()})
+		draw_bars(0.2, 0.75, true, i => 4*input.im[i])
+		mouse_input(-1, (i, v) => {input.im[i] = v/4; calc_output()})
 		
 		draw_bars(0.8, 0.25, false, i => get_abs(output, i))
 		mouse_input(0, (i, v) => {set_abs(output, i, v); calc_input()})
@@ -686,7 +715,7 @@ new Widget("fft-io", widget => {
 			ctx.strokeRect(0.5*(canvas.width - w), 0.5*(canvas.height - h), w, h)
 			
 			ctx.fillText("fft() -->", 0, -10)
-			ctx.fillText("<-- fft_inverse()", 0, 10)
+			ctx.fillText("<-- inverse_fft()", 0, 10)
 			
 			ctx.setTransform(scale, 0, 0, scale, 0.2*canvas.width, 0.5*canvas.height)
 			ctx.fillText("Water Surface (x)", 0, 0)
@@ -707,6 +736,19 @@ new Widget("fft-io", widget => {
 	}
 })
 </script>
+
+~~The Fast Fourier Transform is an algorithm that can take a grid of N numbers that describe the water's surface (height and velocity), and turns it into a complete list of N sines and cosines for all the various sized waves present. It's companion, the inverse FFT, can take a list of sines and cosines and turn it back into the height and velocity. As it's name suggests, it's very fast. How the FFT works is beyond the scope of this article, but you should be able to find an FFT library for basically any programming language.~~
+
+~~The FFT has a couple of quirks. First, it treats it's input as if it's repeating. This is extremely handy if you want a result that is tileable. If you don't, then you'll need to leave some dead space at the edges where you can clamp the waves down to zero to prevent them from wrapping around. Another quirk is that the size of the input has to be a power of two (2, 4, 8, 16, etc). It's possible to work around that, but it's much easier to just work with the limitation.~~
+
+~~The input and output of the FFT is fairly straightforward too once you see the pattern. It does use complex numbers, but don't worry if that gives you dread. The scrolling waves above already used them, and that's kinda all you need to know. Complex numbers have a "real" and "imaginary" part that are like the x and y parts of a 2D vector. For example, say you had a list of just 8 points that made up your water's surface. Using the FFT would look something like this:~~
+
+
+~~The output numbers are also complex numbers, they represent the sines and cosines of the waves. Think of it like a 2D vector again. The length of the vector is the wave's amplitude, and the angle it points in is the wave's phase.~~
+
+~~To use the FFT in 3D, you would apply it to the rows of the grid first. Then apply it to the columns. (or the other way around, the order doesn't matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but surprisingly the FFT is a separable linear transform which means you can take that computational shortcut!~~
+
+~~Finally, the inverse FFT is the exact opposite. You give it a list of N complex numbers describing the waves, and it gives you back N numbers with the height and velocity of each wave. No surprises.~~
 
 # Animating Water with the FFT
 
@@ -940,4 +982,4 @@ new Widget("fft2-waves", widget => {
 })
 </script>
 
-TODO One last step, turning it into a simulation.
+## Extending Into Simulation
