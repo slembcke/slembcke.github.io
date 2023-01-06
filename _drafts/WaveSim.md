@@ -1008,16 +1008,15 @@ This article was supposed to be about wave simulation, but up to this point it's
 
 <canvas id="fft3-waves" style="border:solid 1px #0002;"></canvas>
 
-<textarea id="fft3-code" rows="25" style="width:100%; font-size:125%" spellcheck="false">
+<textarea id="fft3-code" rows="24" style="width:100%; font-size:125%" spellcheck="false">
 waves_y = fft(water_y);
 waves_y[0] = complex(0, 0);
 
-let damping = 2e-2;
 for(let i = 0; i <= waves_y.n/2; i++){
   let phase = -delta_time*sqrt(i);
   let phase_complex = complex(cos(phase), sin(phase));
   
-  let magnitude = exp(-delta_time*damping*i);
+  let magnitude = exp(-0.01*delta_time*i);
   phase_complex.re *= magnitude;
   phase_complex.im *= magnitude;
   
@@ -1031,8 +1030,8 @@ for(let i = 0; i <= waves_y.n/2; i++){
   waves_y[j] = q;
 }
 
-water_x = lifft_inverse_complex(waves_x);
-water_y = lifft_inverse_complex(waves_y);
+water_x = inverse_fft(waves_x);
+water_y = inverse_fft(waves_y);
 </textarea>
 <pre id="fft3-error" hidden="true"></pre>
 
