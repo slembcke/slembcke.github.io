@@ -1008,22 +1008,31 @@ This article was supposed to be about wave simulation, but up to this point it's
 
 <canvas id="fft3-waves" style="border:solid 1px #0002;"></canvas>
 
-<textarea id="fft3-code" rows="16" style="width:100%; font-size:125%" spellcheck="false">
-for(let i = 0; i <= waves.n/2; i++){
-  let phase = -time*sqrt(i);
+<textarea id="fft3-code" rows="25" style="width:100%; font-size:125%" spellcheck="false">
+waves_y = fft(water_y);
+waves_y[0] = complex(0, 0);
+
+let damping = 2e-2;
+for(let i = 0; i <= waves_y.n/2; i++){
+  let phase = -delta_time*sqrt(i);
   let phase_complex = complex(cos(phase), sin(phase));
   
-  let p = complex_multiply(waves[i], phase_complex);
+  let magnitude = exp(-delta_time*damping*i);
+  phase_complex.re *= magnitude;
+  phase_complex.im *= magnitude;
+  
+  let p = complex_multiply(waves_y[i], phase_complex);
   waves_x[i] = complex(-p.im, p.re);
   waves_y[i] = p;
   
-  let j = (waves.n - i) % waves.n;
-  let q = complex_multiply(waves[j], phase_complex);
+  let j = (waves_y.n - i) % waves_y.n;
+  let q = complex_multiply(waves_y[j], phase_complex);
   waves_x[j] = complex(q.im, -q.re);
   waves_y[j] = q;
 }
-water_x = inverse_fft(waves_x);
-water_y = inverse_fft(waves_y);
+
+water_x = lifft_inverse_complex(waves_x);
+water_y = lifft_inverse_complex(waves_y);
 </textarea>
 <pre id="fft3-error" hidden="true"></pre>
 
@@ -1037,15 +1046,14 @@ new Widget("fft3-waves", widget => {
 	
 	function compile(code){
 		return Function(
-			"time", "_spectra",
+			"delta_time", "water_y",
 			`'use strict';
-				const {cos, sin, sqrt} = Math
+				const {cos, sin, sqrt, exp} = Math
 				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
-				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
-				const waves_x = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
-				const waves_y = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
-				let water_x = lifft_complex_arr(_spectra.n)
-				let water_y = lifft_complex_arr(_spectra.n)
+				const fft = (arr => new Proxy(lifft_forward_complex(arr), COMPLEX_ARRAY_PROXY));
+				const waves_x = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY);
+				let waves_y = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY)
+				let water_x = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY);
 				${code}
 				return [water_x, water_y]
 			`
@@ -1070,27 +1078,11 @@ new Widget("fft3-waves", widget => {
 	
 	let water_y = lifft_complex_arr(SPECTRA.n);
 	return function(t){
-		const waves_x = lifft_complex_arr(water_y.n);
+		const delta_time = 5*widget.dt;
+		
+		let water_x;
+		[water_x, water_y] = func(delta_time, water_y);
 		const waves_y = lifft_forward_complex(water_y);
-		waves_y.re[0] = waves_y.im[0] = 0;
-		
-		const dt = 1.5*widget.dt, damping = 2e-2;
-		for(let i = 0; i <= waves_y.n/2; i++){
-			const phase = -dt*Math.sqrt(i)*Math.PI, mag = Math.exp(-dt*damping*i);
-			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
-			
-			const p = lifft_cmul(w, lifft_complex(waves_y.re[i], waves_y.im[i]));
-			[waves_x.re[i], waves_x.im[i]] = [-p.im, +p.re];
-			[waves_y.re[i], waves_y.im[i]] = [+p.re, +p.im];
-			
-			let j = (waves_y.n - i) % waves_y.n;
-			const q = lifft_cmul(w, lifft_complex(waves_y.re[j], waves_y.im[j]));
-			[waves_x.re[j], waves_x.im[j]] = [+q.im, -q.re];
-			[waves_y.re[j], waves_y.im[j]] = [+q.re, +q.im];
-		}
-		
-		let water_x = lifft_inverse_complex(waves_x);
-		water_y = lifft_inverse_complex(waves_y);
 		
 		ctx.setTransform(canvas.width/waves_y.n, 0, 0, -5, 0, canvas.height);
 		for(let i = 0; i < waves_y.n; i++){
@@ -1104,9 +1096,9 @@ new Widget("fft3-waves", widget => {
 		ctx.lineCap = ctx.lineJoin = "round";
 		
 		if(widget.mleft){
-			const x = widget.mlocal.x;
+			const x = widget.mlocal.x, dt = widget.dt;
 			for(let i = 0; i < water_y.n; i++){
-				water_y.im[i] -= 30*dt*Math.max(0, 1 - Math.abs(i - x)/2);
+				water_y.re[i] -= 50*dt*Math.max(0, 1 - Math.abs(i - x)/2);
 			}
 		}
 		
