@@ -154,7 +154,7 @@ new Widget("wavies", widget => {
 			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
 			
 			const p = lifft_cmul(w, lifft_complex(spectra_y.re[i], spectra_y.im[i]));
-			[spectra_x.re[i], spectra_x.im[i]] = [p.re, p.im];
+			[spectra_x.re[i], spectra_x.im[i]] = [+p.im, -p.re];
 			[spectra_y.re[i], spectra_y.im[i]] = [+p.re, +p.im];
 			
 			const j = -i & (n - 1);
@@ -1002,4 +1002,124 @@ new Widget("fft2-waves", widget => {
 * Try adding both forwards and backwards moving waves.
 * Try experimenting with the `waves_x` values to see how it changes the wave shapes.
 
-## Extending Into Simulation
+## Water Simulation
+
+This article was supposed to be about wave simulation, but up to this point it's just been about animations. Don't ask for your money back just yet! It's come time to add a few more lines of code and turn our animation into a simulation. We can interact with the water as a grid easily enough by changing the height and velocity in the grid cells, and we can animate the water easily if we have a list of the waves it's made of. The beauty of working with fourier transforms is that you can both domains. So far we've only used the inverse FFT to convert our waves into the water, but we can convert the water back into waves too. Demo time again!
+
+<canvas id="fft3-waves" style="border:solid 1px #0002;"></canvas>
+
+<textarea id="fft3-code" rows="16" style="width:100%; font-size:125%" spellcheck="false">
+for(let i = 0; i <= waves.n/2; i++){
+  let phase = -time*sqrt(i);
+  let phase_complex = complex(cos(phase), sin(phase));
+  
+  let p = complex_multiply(waves[i], phase_complex);
+  waves_x[i] = complex(-p.im, p.re);
+  waves_y[i] = p;
+  
+  let j = (waves.n - i) % waves.n;
+  let q = complex_multiply(waves[j], phase_complex);
+  waves_x[j] = complex(q.im, -q.re);
+  waves_y[j] = q;
+}
+water_x = inverse_fft(waves_x);
+water_y = inverse_fft(waves_y);
+</textarea>
+<pre id="fft3-error" hidden="true"></pre>
+
+Edit this code!
+{: style="text-align: center"}
+
+<script>'use strict';
+new Widget("fft3-waves", widget => {
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
+	
+	function compile(code){
+		return Function(
+			"time", "_spectra",
+			`'use strict';
+				const {cos, sin, sqrt} = Math
+				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
+				const waves = new Proxy(_spectra, COMPLEX_ARRAY_PROXY)
+				const waves_x = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
+				const waves_y = new Proxy(lifft_complex_arr(_spectra.n), COMPLEX_ARRAY_PROXY)
+				let water_x = lifft_complex_arr(_spectra.n)
+				let water_y = lifft_complex_arr(_spectra.n)
+				${code}
+				return [water_x, water_y]
+			`
+		);
+	}
+
+	const code_area = document.getElementById("fft3-code");
+	let func = compile(code_area.value);
+	code_area.oninput = (e => {
+		const output = document.getElementById("fft3-error");
+		try {
+			const f = compile(code_area.value);
+			f(0, lifft_complex_arr(SPECTRA.n));
+			func = f;
+			output.hidden = true;
+		} catch(err) {
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
+		}
+	})
+	
+	let water_y = lifft_complex_arr(SPECTRA.n);
+	return function(t){
+		const waves_x = lifft_complex_arr(water_y.n);
+		const waves_y = lifft_forward_complex(water_y);
+		waves_y.re[0] = waves_y.im[0] = 0;
+		
+		const dt = 1.5*widget.dt, damping = 2e-2;
+		for(let i = 0; i <= waves_y.n/2; i++){
+			const phase = -dt*Math.sqrt(i)*Math.PI, mag = Math.exp(-dt*damping*i);
+			const w = lifft_complex(mag*Math.cos(phase), mag*Math.sin(phase));
+			
+			const p = lifft_cmul(w, lifft_complex(waves_y.re[i], waves_y.im[i]));
+			[waves_x.re[i], waves_x.im[i]] = [-p.im, +p.re];
+			[waves_y.re[i], waves_y.im[i]] = [+p.re, +p.im];
+			
+			let j = (waves_y.n - i) % waves_y.n;
+			const q = lifft_cmul(w, lifft_complex(waves_y.re[j], waves_y.im[j]));
+			[waves_x.re[j], waves_x.im[j]] = [+q.im, -q.re];
+			[waves_y.re[j], waves_y.im[j]] = [+q.re, +q.im];
+		}
+		
+		let water_x = lifft_inverse_complex(waves_x);
+		water_y = lifft_inverse_complex(waves_y);
+		
+		ctx.setTransform(canvas.width/waves_y.n, 0, 0, -5, 0, canvas.height);
+		for(let i = 0; i < waves_y.n; i++){
+			ctx.fillStyle = "#0002";
+			const weight = i == 0 ? 1 : (waves_y.n/2 - Math.abs(waves_y.n/2 - i));
+			ctx.fillRect(i, 0, 0.9, weight*Math.hypot(waves_y.re[i], waves_y.im[i]));
+		}
+		
+		const scale = canvas.width/(water_y.n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
+		
+		if(widget.mleft){
+			const x = widget.mlocal.x;
+			for(let i = 0; i < water_y.n; i++){
+				water_y.im[i] -= 30*dt*Math.max(0, 1 - Math.abs(i - x)/2);
+			}
+		}
+		
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
+		for(let i = 0; i < water_y.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i]);
+		ctx.stroke();
+		
+		ctx.fillStyle = "#0008";
+		ctx.textAlign = "center";
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height);
+		ctx.fillText("Click to add splashes.", 0, 0);
+	}
+})
+</script>
