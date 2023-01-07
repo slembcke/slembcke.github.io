@@ -611,15 +611,120 @@ Since you already know that this article is about using the FFT to simulate wate
 
 # Complex Numbers
 
-The FFT operates on complex numbers. Don't let the name fool you, they're just fancy 2D vectors with many common properties. Addition works the same, and calculating their length or direction works the same way. One of the main differences is how they are written: instead of _(x,&nbsp;y)_ you would write _(x&nbsp;+&nbsp;y*i)_. The x part is called the "real" part, and the y part is called the "imaginary" part. The magic comes when you multiply them since it lets you do a bunch of trigonometry stuff without actually doing trigonometry. All you need to know for this article is that when you multiply two complex numbers you add the angles of their directions together and multiply their lengths to get the result. Basically you get scaling and rotation in the same step, and the implementation is just a few regular multiplications and additions. Magic!
+The FFT operates on complex numbers, so we should talk about the basics. Don't let the name fool you though, they're just like 2D vectors with many common properties. Addition works the same, and calculating their length or direction works the same way. Instead of x and y coordinates, they have "real" and "imaginary" parts that mean the same thing. When we work with the FFT to make a wave, it will give us the wavelength and we tell it the amplitude and phase shift of the wave using the length and the angle of a complex number we give back. It works like this:
 
-(TODO needs a diagram here probably?)
+<canvas id="complex-waves" style="border:solid 1px #0002;"></canvas>
+
+The length of a complex number sets the amplitude of the wave, and the angle sets it's phase.
+{: style="text-align: center"}
+
+<script>"use strict";
+new Widget("complex-waves", widget => {
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4
+	
+	return function(t){
+		const scale = 0.5*canvas.height;
+		ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, scale);
+		let {x, y} = (widget.mfocus ? widget.mlocal : {x: 0.5, y:-0.5});
+		let mag = Math.hypot(x, y), phase = (2*Math.PI + Math.atan2(y, x))%(2*Math.PI);
+		if(mag > 1){
+			x /= mag;
+			y /= mag;
+			mag = 1;
+		}
+		
+		// Draw axis
+		ctx.lineWidth = 1/scale;
+		ctx.strokeStyle = "#888"
+		ctx.beginPath();
+		ctx.moveTo(-10,  0); ctx.lineTo(10, 0);
+		ctx.moveTo(  0, -1); ctx.lineTo( 0, 1);
+		ctx.moveTo(-10, -mag); ctx.lineTo(10, -mag);
+		ctx.moveTo(-10, +mag); ctx.lineTo(10, +mag);
+		ctx.stroke();
+		
+		// Draw circle
+		ctx.strokeStyle = "#CCC";
+		ctx.beginPath();
+		ctx.arc(0, 0, mag, 0, 2*Math.PI);
+		ctx.stroke();
+		
+		// Draw wave
+		ctx.lineWidth = 2/scale;
+		ctx.strokeStyle = "#0CF"
+		ctx.beginPath();
+		// ctx.lineTo(0, 0); ctx.lineTo(1, 1);
+		for(let x = -5; x < 5; x += 0.05) ctx.lineTo(x, mag*Math.sin(x*4 + phase));
+		ctx.stroke();
+		
+		// Draw real/imag
+		ctx.lineWidth = 4/scale;
+		ctx.strokeStyle = "#F00"
+		ctx.beginPath();
+		ctx.moveTo(0, 0); ctx.lineTo(x, 0);
+		ctx.stroke();
+		ctx.strokeStyle = "#0F0"
+		ctx.beginPath();
+		ctx.moveTo(0, 0); ctx.lineTo(0, y);
+		ctx.stroke();
+		
+		// Draw vector/angle
+		ctx.lineWidth = 2/scale;
+		ctx.strokeStyle = "#000"
+		ctx.beginPath();
+		ctx.moveTo(0, 0); ctx.lineTo(x, y);
+		ctx.stroke();
+		ctx.strokeStyle = "#00F";
+		ctx.beginPath();
+		ctx.arc(0, 0, mag*0.2	, 0, phase);
+		ctx.stroke();
+		
+		ctx.strokeRect(-phase/4, -mag, Math.PI/2, 2*mag);
+		// ctx.beginPath();
+		// ctx.lineTo(0, mag);
+		// ctx.lineTo((2*Math.PI - phase)/4, mag);
+		// // ctx.lineTo((Math.PI - phase)/4, 0);
+		// ctx.stroke();
+		
+		if(widget.mfocus){
+			ctx.setTransform(1.5, 0, 0, 1.5, 0.05*canvas.width, 0.5*canvas.height);
+			ctx.fillStyle = "#FFFC";
+			ctx.fillRect(-10, -35, 160, 70);
+			
+			ctx.font = "medium monospace"
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#F00";
+			ctx.fillText(`     Real (x): ${x.toFixed(2)}`, 0, -24);
+			ctx.fillStyle = "#0C0";
+			ctx.fillText(`Imaginary (y): ${y.toFixed(2)}`, 0, -8);
+			ctx.fillStyle = "#00F";
+			ctx.fillText(`  Phase Angle: ${(phase*180/Math.PI).toFixed(0)}°`, 0, 8);
+			ctx.fillStyle = "#000";
+			ctx.fillText(`       Length: ${mag.toFixed(2)}`, 0, 24);
+		} else {
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.35*canvas.height);
+			ctx.fillStyle = "#FFFD";
+			ctx.fillRect(-1000, -1000, 2000, 2000);
+			
+			ctx.fillStyle = "#000";
+			ctx.textBaseline = "middle";
+			ctx.textAlign = "center";
+			ctx.fillText("Use Mouse to Interact", 0, 0);
+		}
+	}
+})
+</script>
+
+The reason why the FFT uses complex numbers is because they are a shortcut for a bunch of trigonometry stuff. All you really need to know for this article is that multiplying two complex numbers adds their angles and multiplies their lengths. In other words, it does rotation and scaling in one step. The [underlying math](https://en.wikipedia.org/wiki/Complex_number#Multiplication_and_square) ends up being just a few additions and multiplications which is great for performance. Magic!
+
+There's a lot more neat stuff to discover with complex numbers, like fractals or why they use _real_ and _imaginary_ instead of _x_ and _y_, but that's all you need to know for now.
 
 # The FFT Algorithm
 
-One way to view the Fast Fourier Transform is a fast a way to break a sequence of numbers into an equivalent list of waves. When those waves are added back together, you get the original sequence back. Adding them back together means calculating a lot of sines and cosines, so the inverse FFT provides a fast way to do that. Part of what makes the FFT so quick is that it doesn't actually need to calculate any sines or cosines. How it works is pretty clever, but that's a topic for another article. :D
+The most intuitive way to think of the Fast Fourier Transform, or FFT, is a way to break a sequence of numbers into an equivalent list of waves. If we ran our mixed wave from the last example through the FFT, it would separate it back into the red and blue waves. While you can add these waves back together yourself, it gets expensive very quickly since you have to compute a new list of sines and cosines for each additional wave. Instead you can undo the FFT mixing those waves back together using the inverse FFT. If you were mixing them yourself, each additional wave would cost the same amount of performance, but when using the FFT each additional wave costs less than the one before it. Even better, because it uses complex number tricks, the FFT can skip nearly every single call to (mildly) expensive functions like `sin()` and `cos()`!
 
-Time to get our feet wet! On the left you have 16 pairs of sliders for the water surface, and on the right is 16 pairs of sliders for the waves it breaks down into. The pairs of sliders are complex numbers. On the left side, the water height is the "real" part, and the velocity is the "imaginary" part. On the right side the amplitude of the wave corresponds to the length of the complex number, and it's phase angle is the direction of it. So both sides are complex numbers, just shown in a way that makes sense. Right away, you can see when the water surface looks like a sine wave, it decomposes into a single wave.
+Time to get our feet wet! The 16 pairs of sliders on the left are the height and velocity at each grid point of the water. They come in pairs because they are actually complex numbers: height = real, velocity = imaginary. The 16 pairs on the right side are the amplitude and phase of the waves the water decomposes into. These are also complex numbers, but drawn using the length and angle since those are the wave properties we are interested in. Right away, you can see when the water surface looks like a sine wave, it decomposes into a single wave.
 
 <canvas id="fft-io" style="border:solid 1px #0002;"></canvas>
 
@@ -739,25 +844,37 @@ new Widget("fft-io", widget => {
 			ctx.setTransform(scale, 0, 0, scale, 0.8*canvas.width, 0.5*canvas.height);
 			ctx.fillText("Waves (frequencies)", 0, 0);
 		}
+		
+		if(!widget.mfocus){
+			ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.5*canvas.height);
+			ctx.fillStyle = "#FFFD";
+			ctx.fillRect(-1000, -1000, 2000, 2000);
+			
+			ctx.fillStyle = "#000";
+			ctx.textBaseline = "middle";
+			ctx.textAlign = "center";
+			ctx.fillText("Use Mouse to Interact", 0, 0);
+		}
 	}
 })
 </script>
 
-Did you notice:
+* What does the first wave value represent?
+* What's the difference between the 2nd and last waves?
+* How does the phase affect the 2nd and last wave differently?
+* Which waves have long or short wavelengths?
+* What's different about the 9th wave?
+* Does changing a single water value change all waves?
+* Does changing a single wave value change all of the water?
+* The height and velocity always look similar. Do you remember [why](#the-simplest-wave)?
 
-* ... that the 1st "wave" is really the just water level?
-* ... that the 2nd and last waves are almost the same?
-* ... the phase causes the 2nd and last waves to move in opposite directions?
-* ... the wavelength gets shorter as you move to the middle?
-* ... the 9th wave doesn't change phase like the rest?
-* ... that changing a single water value changes every wave?
-* ... that the height and velocity waves are always 90° out of phase?
-* ... that it has the same number of inputs as outputs?
-* ... that the size of the sequence, 16, is a power of two? (Not a coincidence!)
+Now for some boring FFT details we need to know: When given a grid of _N_ water surface points, the FFT will split it into _N_ waves. Also, the biggest performance trick the FFT uses only works when the size is a power of two. (like 16, 256, 1024, etc) You can work around this, but it's easiest not to. The FFT also treats the input as a repeating sequence. This is _extremely_ handy if you want to make the results tileable. It's mildly annoying if you don't, but to avoid it you'll just need to save some space at the edges to clamp the height/velocity values to 0.
 
-Some important details you maybe didn't figure out by experimenting: The FFT always produces the same number of inputs as outputs. Do you remember solving sets of equations in algebra? You always needed the same number of equations as the number of "unknowns". This is _exactly_ the same thing, but it's still neat to know that a sequence of numbers can be substituted for the same number of waves. The second half of the waves are backwards. It's actually much more complicated than that, but simulating waves doesn't require you to know about that! The wavelengths the FFT uses are very predictable. The 2nd and last wave have a wavelength of _N/2_ (where N is the length of the sequence). The 3rd and 2nd to last waves have a wavelength of _N/2_, and so on until you get to the shortest wave in the middle(ish...) with a wavelength of 2 or _N/(N/2)_. The 1st wave is just the average of all the water. Think of it as having a wavelength of infinity or _N/0_.
+The wavelengths the FFT uses always follow a simple pattern: The first wave is just the average water height/velocity (think _wavelength = infinity_). Then next few waves will have wavelengths _N/1_, _N/2_, _N/3_ and so on. Eventually when you get to the middle, you'll have a wavelength of _N/(N/2)_, which simplifies to 2. Now the waves switch directions, and the wavelengths start getting longer until you get to the final wave with a wavelength of _N/1_ again. Put another way, the waves have wavelength _N/index_ in the first half and _N/(N&nbsp;-&nbsp;index)_ in the second half.
 
-To use the FFT for 3D water, you would apply it to the rows of the grid first, then apply it to the columns. (the order doesn't actually matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but that's how it works. The FFT is a [separable filter](https://en.wikipedia.org/wiki/Separable_filter) so you can take this nice computational shortcut.
+# Using the FFT on a 2D Grid for a 3D Game
+
+To use the FFT for 3D water, you would apply it to the rows of the grid first, then apply it to the columns. (the order doesn't actually matter) It might seem weird to apply the FFT to the columns when they already contain wave information, but it works! The FFT is a [separable filter](https://en.wikipedia.org/wiki/Separable_filter) so you can take this nice computational shortcut. There's a few extra details you need to know for water in a 3D game, but there are plenty of resources for that once you know these basics.
 
 # Animating Water with the FFT
 
@@ -860,7 +977,7 @@ new Widget("fft1-waves", widget => {
 		for(let i = 0; i < water.n; i++) ctx.lineTo(i - water.im[i], water.re[i]);
 		ctx.stroke();
 		
-		ctx.fillStyle = "#0008";
+		ctx.fillStyle = "#000D";
 		ctx.textAlign = "center";
 		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height);
 		ctx.fillText("Left drag to set spectrum. Right drag to clear.", 0, 0);
