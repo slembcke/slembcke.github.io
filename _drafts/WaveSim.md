@@ -203,7 +203,7 @@ new Widget("wavies", widget => {
 			ctx.setTransform(3, 0, 0, 3, canvas.width/2, canvas.height/3);
 			ctx.fillStyle = "#0008";
 			ctx.textAlign = "center";
-			ctx.fillText("Use Mouse to Interact", 0, 0);
+			ctx.fillText("Use the Mouse to Interact", 0, 0);
 		}
 	}
 })
@@ -317,7 +317,7 @@ new Widget("simple-wave", widget => {
 })
 </script>
 
-If the blue line is the water height, can you guess what the red line is? (Hint: watch the red arrow.) It's the water's vertical velocity. When the velocity is up it makes the height move up, and when the height is up it makes the velocity move down. Another way of looking at it is that the velocity wave pulls the height wave. If you swapped their positions it would make the wave move to the right instead. The velocity will be important later when we talk about simulating waves, but for now let's take a shortcut and just animate them.
+If the blue line is the water height, can you guess what the red line is? (Hint: watch the red arrow.) It's the water's vertical velocity. When the velocity is up it makes the height move up, and when the height is up it makes the velocity move down. Another way of looking at it is that the velocity wave pulls the height wave. If you swapped their positions they would pull wave move to the left instead. The velocity will be important later when we talk about simulating waves, but for now let's take a shortcut and just animate the height.
 
 # A Better Wave
 
@@ -710,7 +710,7 @@ new Widget("complex-waves", widget => {
 			ctx.fillStyle = "#000";
 			ctx.textBaseline = "middle";
 			ctx.textAlign = "center";
-			ctx.fillText("Use Mouse to Interact", 0, 0);
+			ctx.fillText("Use the Mouse to Interact", 0, 0);
 		}
 	}
 })
@@ -853,7 +853,7 @@ new Widget("fft-io", widget => {
 			ctx.fillStyle = "#000";
 			ctx.textBaseline = "middle";
 			ctx.textAlign = "center";
-			ctx.fillText("Use Mouse to Interact", 0, 0);
+			ctx.fillText("Use the Mouse to Interact", 0, 0);
 		}
 	}
 })
@@ -868,7 +868,7 @@ new Widget("fft-io", widget => {
 * Does changing a single wave value change all of the water?
 * The height and velocity always look similar. Do you remember [why](#the-simplest-wave)?
 
-Now for some boring FFT details we need to know: When given a grid of _N_ water surface points, the FFT will split it into _N_ waves. Also, the biggest performance trick the FFT uses only works when the size is a power of two. (like 16, 256, 1024, etc) You can work around this, but it's easiest not to. The FFT also treats the input as a repeating sequence. This is _extremely_ handy if you want to make the results tileable. It's mildly annoying if you don't, but to avoid it you'll just need to save some space at the edges to clamp the height/velocity values to 0.
+Now for some boring FFT details we need to know: When given a grid of _N_ water surface points, the FFT will split it into _N_ waves. Also, the biggest performance trick the FFT uses only works when the size is a power of two. (like 16, 256, 1024, etc) You can work around the size limitation, but it's easier not to. The FFT also treats the input as a repeating sequence. This is _extremely_ handy if you want to make the results tileable, but mildly annoying if you don't. To avoid wrapping around you'll just need to save some space at the edges to clamp the height/velocity values to 0.
 
 The wavelengths the FFT uses always follow a simple pattern: The first wave is just the average water height/velocity (think _wavelength = infinity_). Then next few waves will have wavelengths _N/1_, _N/2_, _N/3_ and so on. Eventually when you get to the middle, you'll have a wavelength of _N/(N/2)_, which simplifies to 2. Now the waves switch directions, and the wavelengths start getting longer until you get to the final wave with a wavelength of _N/1_ again. Put another way, the waves have wavelength _N/index_ in the first half and _N/(N&nbsp;-&nbsp;index)_ in the second half.
 
@@ -878,13 +878,13 @@ To use the FFT for 3D water, you would apply it to the rows of the grid first, t
 
 # Animating Water with the FFT
 
-Time to dive into another example. If we make a list of waves, animate their phases, and pass them to the inverse FFT we should get a nice water animation. The gray bars are the amplitudes of the waves we will use (there are now 64 of them). The FFT defines the wavelengths for us, so all we need to do is make them move at the right speed by changing their phase. Earlier we figured out the phase rate should be `-time/sqrt(wavelength)`. With the FFT the wavelength = 1/i where i is the 0 based index of the wave. If we substitute that in, we get `-time*sqrt(i)`. Remember that the waves are defined by complex numbers, and we need to add our phase to theirs. Complex multiplication adds angles and multiplies lengths, so we just need to make a complex number with a length of 1 and the angle we want, and multiply by that. For now we are going to ignore the "backwards" waves and only process the first half. Enough words, demo time!
+With all that out of the way, let's animate some water with 64 waves and see what it looks like. Remember we have 3 wave parameters: wavelength, amplitude, and speed. We can pick the amplitudes ahead of time using the grey slider bars, the wavelenths define the speed `-time/sqrt(wavelength)`, and the inverse FFT defines the 64 wavelengths we will use. Let's simplify things even further for now. Let's ignore the backwards moving waves (the second half of them), and since _N_ is a constant for all waves we can just use _1/i_ as the wavelength expression when calculating the speed. We can multiply the whole thing by a constant instead to control the time scale of all the waves leaving us with just `-time*time_scale*sqrt(i)` for the wave speed. The last little detail is that the grey bars will give us a complex number with a length controlled by the bar, and a random starting phase. (Waves kind of [explode](https://youtu.be/iWKFPTgkpXo?t=490) if their phases _all_ line up at the same time, and that doesn't really happen in nature.) We need to add our animated angle to this number while keeping it's length. Remember that complex multiplication lets us add angles and multiply lengths. So if we multiply by `complex(cos(angle), sin(angle)`, then we the angle with a length of 1.
 
 <canvas id="fft1-waves" style="border:solid 1px #0002;"></canvas>
 
 <textarea id="fft1-code" rows="7" style="width:100%; font-size:125%" spellcheck="false">
-for(let i = 0; i <= waves.n/2; i++){
-  let phase = -time*sqrt(i)
+for(let i = 0; i < waves.n; i++){
+  let phase = -5*time*sqrt(i)
   let phase_complex = complex(cos(phase), sin(phase));
   waves[i] = complex_multiply(waves[i], phase_complex);
 }
@@ -950,7 +950,7 @@ new Widget("fft1-waves", widget => {
 			[spectra.re[i], spectra.im[i]] = [p.re, p.im];
 		}
 		
-		const water = func(4*t, spectra);
+		const water = func(t, spectra);
 		
 		const scale = canvas.width/(water.n - 1);
 		
@@ -993,22 +993,27 @@ new Widget("fft1-waves", widget => {
 Edit this code!
 {: style="text-align: center"}
 
-* Experiment with the wave speed factor.
-* Can you make the waves move the same speed?
+* Experiment with the wave speeds.
+* Can you make the waves all move the same speed?
 * Can you make the waves move to the left?
 * What happens if you negate the sin() or cos()? Do you know why?
 * What happens if you replace the sin() or cos() with zero?
-* What happens if you change the loop condition to `i < waves.n` and add backwards waves?
+* Does the animation work if you add backwards waves? (The bars on the right half)
 
-This looks quite nice to my eyes. The wave heights and spacing are all different and always changing. It looks random yet it's _entirely_ predictable, and the model for it is simple even. We can trivially predict what the water will look like at any time with 5 lines of code! It's effectively the same method we used with 2 waves, but now with potentially dozens of waves. The way it's drawn is basically the same too. The "real" water values have the sum of the cosines, and the "imaginary" values have the sines.
+This is looking pretty good. The peak heights and spacing are all different and always changing. It looks random yet it's _entirely_ predictable from the initial state set by the gray bars. We can easily predict what the water will look like at _any_ time with just 5 lines of code! To draw it, the "real" parts of the numbers are the sum of the cosines, and the "imaginary" parts are the sum of the cosines. This just substites right into the old drawing code you wrote before like this:
 
-This simplification does lead to a problem though if you want waves going both directions. This doesn't really matter for ocean waves, but it's crucial if you want to do a simulation. As any splash will cause waves to move outwards in both directions. The first issue is that the waves come in pairs of wavelengths, so we need to process their phases together. The second issue is that the convenient re-use of the water velocity (the "imaginary" part) as the x-coord of the trochoidal motion only works for forwards moving waves. It makes the trochoidal shape upside down for backwards moving waves. Bah! Well at least we can get rid of that pesky negative sign in the _x&nbsp;-&nbsp;sin(...)_ drawing code now. Instead we will need to calculate a second FFT for the x-coord of the trochoidal motion. Fortunately the motion is very similar in x and y. For forward moving waves it's 90° behind, and for backwards moving waves it's 90° ahead. All we need to do is flip some coordinates to do that. Now when drawing the wave, we use the "real" parts of the water_x and water_y sequences instead.
+```
+x_out[i] = i - water[i].imaginary;
+y_out[i] = water[i].real
+```
+
+Now, we ignored handling the wavelengths of the backwards waves (the ones in the second half), so it's not suprising that they get glitchy. That's easy enough to fix though, we can just process the waves in forwards/backwards pairs that share wavelengths. Another issue is that we are sort of abusing the water's imaginary number component. It's _supposed_ to be the velocity of the water's surface, and it's only convenient that it's the same value we needed for the trochoidal motion. For backwards moving waves it goes negative and turns the trochoidal shape upside down. Drat! The fix for that is a bit more annoying as we need to make a second set of waves. For forward moving waves its phase is 90° behind, and for backwards moving waves it's 90° ahead. We can just swap some coordinates to do right angles though. Now we have two arrays of complex numbers for the x and y positions of the water, and use the "real" values of each to draw it.
 
 <canvas id="fft2-waves" style="border:solid 1px #0002;"></canvas>
 
 <textarea id="fft2-code" rows="16" style="width:100%; font-size:125%" spellcheck="false">
 for(let i = 0; i <= waves.n/2; i++){
-  let phase = -time*sqrt(i);
+  let phase = -5*time*sqrt(i);
   let phase_complex = complex(cos(phase), sin(phase));
   
   let p = complex_multiply(waves[i], phase_complex);
@@ -1077,7 +1082,7 @@ new Widget("fft2-waves", widget => {
 		}
 		
 		const scale = canvas.width/(spectra.n - 1);
-		const [water_x, water_y] = func(4*t, spectra);
+		const [water_x, water_y] = func(t, spectra);
 		
 		ctx.setTransform(canvas.width/spectra.n, 0, 0, -5, 0, canvas.height);
 		const {x:mx, y:my} = widget.mlocal;
@@ -1119,23 +1124,33 @@ new Widget("fft2-waves", widget => {
 * Try adding both forwards and backwards moving waves.
 * Try experimenting with the `waves_x` values to see how it changes the wave shapes.
 
+This is quite a bit more complicated than the last code snippet, but now we can animate basically any sort of surface wave interaction.
+
 ## Water Simulation
 
-This article was supposed to be about wave simulation, but up to this point it's just been about animations. Don't ask for your money back just yet! It's come time to add a few more lines of code and turn our animation into a simulation. We can interact with the water as a grid easily enough by changing the height and velocity in the grid cells, and we can animate the water easily if we have a list of the waves it's made of. The beauty of working with fourier transforms is that you can both domains. So far we've only used the inverse FFT to convert our waves into the water, but we can convert the water back into waves too. Demo time again!
+This article promised water simulation, but everything has been only about animation so far. Don't ask for your money back just yet! We only need a few extra changes to turn our animation into a full blown simulation. It's easy to understand how to interact with the water as a grid. You can just change the position or velocity of certain cells to match objects interacting with the surface. It's not obvious how to interact with a list of waves though. The great part about working with fourier transforms is that you can use both representations and switch between them quickly. We've only been using the inverse FFT to go in one direction, but we can go both ways.
+
+We'll keep the water interaction simple. At the beginning of each frame if the mouse is down, we push down the water height of the cells near the mouse. Then we convert the water surface to waves using the FFT and animate similar to before, but with a couple differences. First, we aren't animating the wave from an initial state, we need to change the time to advance from the previous frame instead (_delta_time_). Second, to make the waves lose energy over time, we apply some damping by multiplying the phase by an exponential term to make it's length a little less than 1.0. Shorter waves lose energy faster, so I multiplied that in too. It looks ok, but I have no idea if that math is physically accurate.
 
 <canvas id="fft3-waves" style="border:solid 1px #0002;"></canvas>
 
-<textarea id="fft3-code" rows="24" style="width:100%; font-size:125%" spellcheck="false">
+<textarea id="fft3-code" rows="30" style="width:100%; font-size:125%" spellcheck="false">
+if(click_x){
+  for(let i = -1; i < 1; i++){
+    water_y.re[i + Math.floor(click_x)] -= 30*delta_time;
+  }
+}
+
 waves_y = fft(water_y);
 waves_y[0] = complex(0, 0);
 
 for(let i = 0; i <= waves_y.n/2; i++){
-  let phase = -delta_time*sqrt(i);
+  let phase = -5*delta_time*sqrt(i);
   let phase_complex = complex(cos(phase), sin(phase));
   
-  let magnitude = exp(-0.01*delta_time*i);
-  phase_complex.re *= magnitude;
-  phase_complex.im *= magnitude;
+  let damping = exp(-0.1*delta_time*i);
+  phase_complex.re *= damping;
+  phase_complex.im *= damping;
   
   let p = complex_multiply(waves_y[i], phase_complex);
   waves_x[i] = complex(-p.im, p.re);
@@ -1162,7 +1177,7 @@ new Widget("fft3-waves", widget => {
 	
 	function compile(code){
 		return Function(
-			"delta_time", "water_y",
+			"delta_time", "water_y", "click_x",
 			`'use strict';
 				const {cos, sin, sqrt, exp} = Math
 				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
@@ -1194,12 +1209,16 @@ new Widget("fft3-waves", widget => {
 	
 	let water_y = lifft_complex_arr(SPECTRA.n);
 	return function(t){
-		const delta_time = 5*widget.dt;
+		const delta_time = widget.dt;
+		
+		const scale = canvas.width/(water_y.n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		const click_x = (widget.mleft && widget.mlocal.x);
 		
 		let water_x;
-		[water_x, water_y] = func(delta_time, water_y);
-		const waves_y = lifft_forward_complex(water_y);
+		[water_x, water_y] = func(delta_time, water_y, click_x);
 		
+		const waves_y = lifft_forward_complex(water_y);
 		ctx.setTransform(canvas.width/waves_y.n, 0, 0, -5, 0, canvas.height);
 		for(let i = 0; i < waves_y.n; i++){
 			ctx.fillStyle = "#0002";
@@ -1207,16 +1226,140 @@ new Widget("fft3-waves", widget => {
 			ctx.fillRect(i, 0, 0.9, weight*Math.hypot(waves_y.re[i], waves_y.im[i]));
 		}
 		
-		const scale = canvas.width/(water_y.n - 1);
 		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
 		ctx.lineCap = ctx.lineJoin = "round";
 		
-		if(widget.mleft){
-			const x = widget.mlocal.x, dt = widget.dt;
-			for(let i = 0; i < water_y.n; i++){
-				water_y.re[i] -= 50*dt*Math.max(0, 1 - Math.abs(i - x)/2);
-			}
+		ctx.lineWidth = 3/scale;
+		ctx.strokeStyle = "#0CF";
+		ctx.beginPath();
+		for(let i = 0; i < water_y.n; i++) ctx.lineTo(i + water_x.re[i], water_y.re[i]);
+		ctx.stroke();
+		
+		ctx.fillStyle = "#0008";
+		ctx.textAlign = "center";
+		ctx.setTransform(2, 0, 0, 2, 0.5*canvas.width, 0.25*canvas.height);
+		ctx.fillText("Click to add splashes.", 0, 0);
+	}
+})
+</script>
+
+* Can you make a better interaction than pushing the height down in a square?
+* I set the first wave to 0. What happens if you remove that? Do you know why?
+* Try clicking and dragging the mouse to make a big wave.
+
+The code snippet has gotten pretty long at this point, but it didn't take much more to turn our animation into a simulation. The last problem to solve is that there is nothing to stop breaking waves from happening. Before we were animating waves that were in equilibrium, as if they were blown along by the wind perhaps. We could simply hand tweak the wave levels to prevent breaking waves. Now the waves are set by the simulation, so we have to detect the problem. It's actually realy easy to do with the waves. There's a simple energy limit, so if you add them all up and they are over then breaking waves will occur. That doesn't help our simulation though, since they only actually lose that energy when and where they occur. To detect that, we have to scan through the water grid and look at the x values to see if the mesh vertexes will move past their neighbors. If they do, then we can scale down their height and velocity to decrease the energy at their location. You could use this information to add splashes or foam to the wave crest when drawing it too.
+
+<canvas id="fft4-waves" style="border:solid 1px #0002;"></canvas>
+
+<textarea id="fft4-code" rows="30" style="width:100%; font-size:125%" spellcheck="false">
+if(click_x){
+  for(let i = -1; i < 1; i++){
+    water_y.re[i + Math.floor(click_x)] -= 30*delta_time;
+  }
+}
+
+waves_y = fft(water_y);
+waves_y[0] = complex(0, 0);
+
+for(let i = 0; i <= waves_y.n/2; i++){
+  let phase = -5*delta_time*sqrt(i);
+  let phase_complex = complex(cos(phase), sin(phase));
+  
+  let damping = exp(-0.1*delta_time*i);
+  phase_complex.re *= damping;
+  phase_complex.im *= damping;
+  
+  let p = complex_multiply(waves_y[i], phase_complex);
+  waves_x[i] = complex(-p.im, p.re);
+  waves_y[i] = p;
+  
+  let j = (waves_y.n - i) % waves_y.n;
+  let q = complex_multiply(waves_y[j], phase_complex);
+  waves_x[j] = complex(q.im, -q.re);
+  waves_y[j] = q;
+}
+
+water_x = inverse_fft(waves_x);
+water_y = inverse_fft(waves_y);
+</textarea>
+<pre id="fft4-error" hidden="true"></pre>
+
+Edit this code!
+{: style="text-align: center"}
+
+<script>'use strict';
+new Widget("fft4-waves", widget => {
+	const {canvas, ctx} = widget;
+	canvas.height = canvas.width/4;
+	
+	function compile(code){
+		return Function(
+			"delta_time", "water_y", "click_x",
+			`'use strict';
+				const {cos, sin, sqrt, exp} = Math
+				const complex = lifft_complex, complex_multiply = lifft_cmul, inverse_fft = lifft_inverse_complex
+				const fft = (arr => new Proxy(lifft_forward_complex(arr), COMPLEX_ARRAY_PROXY));
+				const waves_x = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY);
+				let waves_y = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY)
+				let water_x = new Proxy(lifft_complex_arr(water_y.n), COMPLEX_ARRAY_PROXY);
+				${code}
+				return [water_x, water_y]
+			`
+		);
+	}
+
+	const code_area = document.getElementById("fft4-code");
+	let func = compile(code_area.value);
+	code_area.oninput = (e => {
+		const output = document.getElementById("fft4-error");
+		try {
+			const f = compile(code_area.value);
+			f(0, lifft_complex_arr(SPECTRA.n));
+			func = f;
+			output.hidden = true;
+		} catch(err) {
+			console.error(err);
+			output.hidden = false;
+			output.textContent = err;
 		}
+	})
+	
+	let water_y = lifft_complex_arr(SPECTRA.n);
+	return function(t){
+		const delta_time = widget.dt;
+		
+		const scale = canvas.width/(water_y.n - 1);
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		const click_x = (widget.mleft && widget.mlocal.x);
+		
+		let water_x;
+		[water_x, water_y] = func(delta_time, water_y, click_x);
+		for(let i = 0; i < water_y.n; i++){
+			const dx = water_x.re[i];
+			const foo = dx - water_x.re[i + 1] - 1;
+			if(foo > 0){
+				const bar = (water_x.re[i + 1] + 1)/dx;
+				water_y.re[i] *= bar;
+				water_y.im[i] *= bar;
+			}
+			
+			// const abs = Math.abs(water_x.re[i]);
+			// if(abs > 1){
+			// 	water_y.re[i] /= abs;
+			// 	water_y.im[i] /= abs;
+			// }
+		}
+		
+		const waves_y = lifft_forward_complex(water_y);
+		ctx.setTransform(canvas.width/waves_y.n, 0, 0, -5, 0, canvas.height);
+		for(let i = 0; i < waves_y.n; i++){
+			ctx.fillStyle = "#0002";
+			const weight = i == 0 ? 1 : (waves_y.n/2 - Math.abs(waves_y.n/2 - i));
+			ctx.fillRect(i, 0, 0.9, weight*Math.hypot(waves_y.re[i], waves_y.im[i]));
+		}
+		
+		ctx.setTransform(scale, 0, 0, -scale, 0, canvas.height/2);
+		ctx.lineCap = ctx.lineJoin = "round";
 		
 		ctx.lineWidth = 3/scale;
 		ctx.strokeStyle = "#0CF";
