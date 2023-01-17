@@ -42,14 +42,14 @@ For the "drift" engine that my new game, Veridian Expanse, is built on I wanted 
 
 ## What's the Simulation?
 
-I've mentioned a "test setup" multiple times so far. It isn't anything too fancy, ~40k dynamic circles with a blue noise distribution packed into a small square, generating about 15k collisions each frame. I chose this because it emphasized a large number of dynamic bodies in a simple deterministic setup while trying to avoid pathological cases like slow-moving objects that cpBBTree very quite good at. I hashed the collision pair results of all the spatial indexes to verify they were getting the same results (order independent). The following video is a slightly samller example iwth ~10k objects. The full size test is twice the size, but rotating at the same speed. This is surely a bit of a flawed micro-benchmark, but it will have to do for now.
+I've mentioned a "test setup" multiple times so far. It isn't anything too fancy, ~40k dynamic circles with a blue noise distribution packed into a small square, generating about 15k collisions each frame. I chose this because it emphasized a large number of dynamic bodies in a simple deterministic setup while trying to avoid pathological cases like slow-moving objects that cpBBTree very quite good at. I hashed the collision pair results of all the spatial indexes to verify they were getting the same results (order independent). The following video is a slightly samller example with ~10k objects. The full size test is twice the size, but rotating at the same speed. This is surely a bit of a flawed micro-benchmark, but it will have to do for now.
 
  <video width="320" height="240" controls>
   <source src="images/tree-perf/rotating-bounds.m4v" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 
-Without further ado, here's what sort of performance the different indexes get under various object loads. Note the log scales on _both_ axes!
+Without further ado, here's what sort of performance the different indexes get under various object loads. Note the log scales on _both_ axes! (edit: I forgot to mention hardware! Not meant to be an absolute performance measure, but it was run with my Ryzen 7 3700X on Pop OS 22.04 LTS using gamemoderun to disable CPU throttling.)
 
 ![timings](images/tree-perf/timings.svg)
 
