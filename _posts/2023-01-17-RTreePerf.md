@@ -13,8 +13,10 @@ This article is going to be about exploring and comparing the performance of sev
 As a quick refresher, AABB trees are a type of bounding volume hierarchy where each node in the tree is a bounding box that contains smaller bounding boxes, until you get to the leaves of the tree where the actual objects you want to work with live. They are fairly easy to work with, and can provide a decent performance increase for collision detection without a lot of code.
 
 ![Example BVH](images/tree-perf/bvh-example.svg)
+{: style="text-align: center"}
 
 <a href="https://commons.wikimedia.org/wiki/File:Example_of_bounding_volume_hierarchy.svg">Schreiberx</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>, via Wikimedia Commons
+{: style="text-align: center"}
 
 # Box2D's [b2DynamicTree](https://github.com/erincatto/box2d/blob/main/src/collision/b2_dynamic_tree.cpp)
 
@@ -44,27 +46,45 @@ Becuase it was implemented for a specific game, I was able to make a few assumpt
 
 In comparison, Chipmunk makes basically no effort to keep it's tree's height or geometry balanced, and just leverages the collision caching to keep performance high. It might be why it's performance has a high variance in general, and such low performance in pathological cases. Box2D on the other hand manages it's tree's height, but doesn't optimize the geometry. (It's basically impossible with a binary tree without just resorting to random reinsertions anyway.) R-trees do an ok job of balancing their height by design, although incremental optimizations to the nodes/geometry and underflow handling seems important for a more general purpose implementation than DriftRTree.
 
-## What's the Simulation?
+## What's the Test Setup?
 
-I've mentioned a "test setup" multiple times so far. It isn't anything too fancy, ~40k dynamic circles with a blue noise distribution packed into a small square, generating about 15k collisions each frame. I chose this because it emphasized a large number of dynamic bodies in a simple deterministic setup while trying to avoid pathological cases like slow-moving objects that cpBBTree very quite good at. I hashed the collision pair results of all the spatial indexes to verify they were getting the same results (order independent). The following video is a slightly samller example with ~10k objects. The full size test is twice the size, but rotating at the same speed. This is surely a bit of a flawed micro-benchmark, but it will have to do for now.
+I've mentioned a "test setup" multiple times so far. It isn't anything too fancy, ~40k dynamic circles with a blue noise distribution packed into a small square, generating about 15k collisions each frame. They are shuffled so their indexes don't correlate with their positions. I chose this because it emphasized a large number of dynamic bodies in a simple deterministic setup while trying to avoid pathological cases like slow-moving objects that cpBBTree very good at. I hashed the collision pair results of all the spatial indexes to verify they were getting the same results (order independent). The following video is a slightly samller example with ~10k objects. The full size test is twice the size, but rotating at the same speed. This is surely a bit of a flawed micro-benchmark, but it will have to do for now.
 
- <video width="320" height="240" controls>
-  <source src="images/tree-perf/rotating-bounds.m4v" type="video/mp4">
-  Your browser does not support the video tag.
+<video width="320" height="240" controls>
+	<source src="images/tree-perf/rotating-bounds.m4v" type="video/mp4">
+	Your browser does not support the video tag.
 </video>
 
-Without further ado, here's what sort of performance the different indexes get under various object loads. Note the log scales on _both_ axes! (edit: I forgot to mention hardware! Not meant to be an absolute performance measure, but it was run with my Ryzen 7 3700X on Pop OS 22.04 LTS using gamemoderun to disable CPU throttling.)
+The tests were run with my Ryzen 7 3700X on Pop OS 22.04 LTS using gamemoderun to disable CPU throttling. The code for the test setup can be found [here](https://github.com/slembcke/tree-perf). I'm currently having trouble integrating the R-tree tests as DriftRTree was not implemented to be very generic and separating it from the rest of the Veridian Expanse codebase is proving difficult. More on that later though.
 
-![timings](images/tree-perf/timings.svg)
+# Test Results
 
-I think it's really interesting how well just brute forcing the collision pairs works, O(n^2) style. It's basically your _best_ option up until you have a few hundred objects. I'd have to pull out some old hardware to check, but I don't think the graph would look like this a decade or two ago. Superscalar CPU pipelining magic! I've told people a few times in the last 5 years or so not to be afraid to try brute forcing a problem if it can fit in a few kilobytes of RAM. It can be really hard to beat!
+Without further ado, here's what sort of performance the different indexes get under various object loads. Note the log scales on _both_ axes!
 
-One thought I have is that if the difference between the Box2D and the Chipmunk line is the collision caching, imagine what it would look like to apply that to the R-tree. Additionally, the Chipmunk implementation has aged like milk. Each node in the cache is 6 pointers, and on a 64 bit machine that's basically a full cache line each. Last time I looked at it in a profiler most of the time in it was spent waiting for memory reads! I can imagine a more cache friendly version of this together with the R-tree really flying. Unfortunately it's a _very_ serial algorithm as far as I can fathom it.
+![timings for dynamic objects](images/tree-perf/timings-dynamic.svg)
+{: style="text-align: center"}
 
-So then my other thought is how well threading the R-tree collisions works. It's so much faster than the other options for large numbers of objects. It could be even faster too as the update phase is still serial. Look at all the empty space in it's CPU trace as all the CPUs wait for the update!
+Neither Chipmunk or Box2D are particularly optimized to handle a simulation where all of the objects are dynamic and moving. This helps them compete better with brute forcing the collisions for low numbers of objects. The "R-tree single" implementation was hacked together quickly as a proof of concept. I believe it's leaving a considerable amount of performance on the table, but that will have to wait.
+
+![timings for 10% dynamic objects](images/tree-perf/timings-mixed.svg)
+{: style="text-align: center"}
+
+Chipmunk in particular has very inconsistent frame timing. Rebuilding the collision cache tends to come in bubbles, making some frames take much longer than others. This makes the average value useless to compare with when discussing real-time algorithms. Because of this, all of the graphs above use a 95 percentile measurement.
+
+![frame timings](images/tree-perf/frame-timing.svg)
+{: style="text-align: center"}
+
+## Thoughts
+
+First up, I think it's really interesting how well just brute forcing the collision pairs works O(n^2) style. Not only is it the simplest option, but it can literally be the fastest option if you only have a small number of objects. I'd have to pull out some old hardware to check, but I don't think the graph would look like this a decade or two ago. Superscalar CPU pipelining magic perhaps?! Don't dismiss the brute force approach if you just need to proccess a few kilobytes of data!
+
+Another thought I have is that if the difference between the Box2D and the Chipmunk line is the collision caching, imagine what it would look like to apply that to the R-tree. Additionally, the Chipmunk implementation has aged like milk. Each node in the cache is 6 pointers, and on a 64 bit machine that's basically a full cache line each! Last time I looked at it in a profiler most of the time in it was spent waiting for memory reads. I can imagine a more cache friendly version of this together with the R-tree really flying. Unfortunately it's a _very_ serial algorithm as far as I can fathom it, so maybe it might be a poor direction for the future.
+
+Lastly, threading the R-tree collisions worked out really well I think. Box2D style queries could be done in parallel easily enough too, but I was pleased with how well I was able to pipeline the R-tree version. It's so much faster than the other options for large numbers of objects. It could be even faster too as the update phase is still serial. Look at all the empty space in it's CPU trace as all the CPUs wait for the update!
 
 ![R-tree CPU trace](images/tree-perf/rtree-trace.png)
+{: style="text-align: center"}
 
-## Future Directions
+# Future Directions
 
 I have no use for a faster R-tree in Veridian expanse, but I'm still very interested in seeing how fast it can be. Updating the leaves in parallel should be easy enough, and pipelining it with the bounds generation should be possible too without an explicit sync point. Updating the internal nodes could probably be batched if they maintained a topological sort, and the reinsertions could be batched too. It's a lot of syncs though... Anyway, there more to do here, and I'm keen to keep digging. :)
