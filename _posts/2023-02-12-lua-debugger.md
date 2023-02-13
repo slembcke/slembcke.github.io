@@ -3,7 +3,7 @@ layout: post
 title: "Writing a Simple Lua debugger."
 description: "A walkthrough of how debugger.lua works, and how I was able to keep it simple."
 date: 2023-2-20
-permalink: debugger-lua
+permalink: DebuggerLua
 ---
 
 ## Why Lua?
