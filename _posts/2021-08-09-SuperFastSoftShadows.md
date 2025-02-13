@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/SuperFastSoftShadows/'
 title: "2D Lighting with Soft Shadows"
 description: "Extending the hard shadow technique with accurate penumbras."
 date: 2021-08-09

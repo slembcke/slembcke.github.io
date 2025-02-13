@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/DriftRenderer/'
 title:  "Project Drift Rendering"
 description: "An overview of my custom renderer in Project Drift"
 date:   2020-12-13 12:00:00 -0500

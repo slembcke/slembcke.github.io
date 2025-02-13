@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/HotLoadC/'
 title: "Easy Hot-Loading for C"
 description: "Hot-Loading isn't just for dynamic languages. It's pretty easy to do with plain C too. Find out how."
 date: 2022-02-20

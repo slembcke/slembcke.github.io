@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/CustomAllocators/'
 title:  "Custom Allocators Demystified"
 description: "An introduction to the what and why of custom allocators."
 date: 2020-10-12

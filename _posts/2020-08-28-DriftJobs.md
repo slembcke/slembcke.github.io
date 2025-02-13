@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/DriftJobs/'
 title:  "Project Drift Job System"
 description: "A job system for my hobby game."
 date:   2020-08-28 12:00:00 -0500

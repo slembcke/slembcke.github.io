@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/DebuggerLua/'
 title: "Writing a Simple Lua debugger."
 description: "A walkthrough of how debugger.lua works, and how I was able to keep it simple."
 date: 2023-2-12

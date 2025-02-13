@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/2DLightingTechniques/'
 title:  "2D Lighting Techniques"
 description: "An overview of various 2D lighting techniques."
 date:   2021-08-01

@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/TreePerf/'
 title: "AABB Tree Shootout"
 description: "A performance comparison of several AABB Tree implementations."
 date: 2023-1-17

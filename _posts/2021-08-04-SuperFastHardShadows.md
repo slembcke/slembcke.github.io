@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: 'redirect'
+redir_to: 'https://www.slembcke.net/blog/SuperFastHardShadows/'
 title: "2D Lighting with Hard Shadows"
 description: "Techniques to implement simple yet efficient hard shadows for a 2D game."
 date: 2021-08-04
